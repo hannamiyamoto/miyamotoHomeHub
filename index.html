@@ -974,13 +974,30 @@
           }
         };
 
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${secureKeys.geminiApi}`, {
-          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
-        });
-        const result = await res.json();
+        const apiUrl = `https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${secureKeys.geminiApi}`;
+        let result = null;
+        let attempt = 0;
+        let success = false;
         
-        if (result.error) throw new Error(result.error.message);
+        // Exponential Backoff Retry Loop (Protects against 429 Quota Errors)
+        while (attempt < 3 && !success) {
+            const res = await fetch(apiUrl, {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+            });
+            
+            if (res.status === 429) {
+                attempt++;
+                await new Promise(r => setTimeout(r, Math.pow(2, attempt) * 1000)); // Wait 2s, then 4s, etc.
+                continue;
+            }
+            
+            result = await res.json();
+            if (result.error) throw new Error(result.error.message);
+            success = true;
+        }
         
+        if (!success) throw new Error("Rate limit exceeded repeatedly. Please check your Google AI Studio quota or try again in a minute.");
+
         const jsonStr = result.candidates[0].content.parts[0].text;
         const recipe = JSON.parse(jsonStr);
 
@@ -989,7 +1006,7 @@
         document.getElementById('input-recipe-instructions').value = (recipe.instructions || []).join('\n');
         
       } catch (e) {
-        alert("AI Import Failed. Please ensure your URL is public and your API Key is correct.\n\nError: " + e.message);
+        alert("AI Import Failed.\n\nError: " + e.message);
       }
       
       btn.innerHTML = originalHtml;
