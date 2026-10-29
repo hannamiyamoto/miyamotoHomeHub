@@ -5,10 +5,14 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Family Command Center</title>
 
-  <!-- Tailwind CSS & Icons -->
+  <!-- Tailwind CSS & Fonts -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+  
+  <!-- Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <!-- Google APIs -->
   <script async defer src="https://apis.google.com/js/api.js" onload="gapiLoaded()"></script>
   <script async defer src="https://accounts.google.com/gsi/client" onload="gisLoaded()"></script>
 
@@ -30,7 +34,7 @@
 </head>
 <body class="h-screen w-screen overflow-hidden flex flex-col font-sans antialiased">
 
-  <!-- HEADER -->
+  <!-- ================= HEADER ================= -->
   <header class="h-20 px-8 flex items-center justify-between shrink-0 bg-white border-b border-warm-border z-10 shadow-xs">
     <div class="flex items-center gap-6">
       <div class="flex flex-col">
@@ -39,386 +43,69 @@
       </div>
     </div>
     <div class="flex items-center gap-4">
-      <button onclick="handleGoogleAuth()" id="google-sync-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold transition-all">
-        <span id="google-dot" class="w-2 h-2 rounded-full bg-blue-400"></span><i data-lucide="calendar" class="w-3.5 h-3.5 text-blue-600"></i><span id="google-sync-text">Connect</span>
+      <button onclick="handleGoogleAuth()" id="google-sync-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold transition-all hover:bg-blue-100">
+        <span id="google-dot" class="w-2 h-2 rounded-full bg-blue-400"></span>
+        <i data-lucide="calendar" class="w-3.5 h-3.5 text-blue-600"></i>
+        <span id="google-sync-text">Connect GCalendar</span>
       </button>
-      <button onclick="switchTab('dashboard')" id="nav-btn-dashboard" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-emerald-600 text-white shadow-md flex items-center gap-2">Dashboard</button>
-      <button onclick="switchTab('grocery')" id="nav-btn-grocery" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-white border border-warm-border text-warm-text hover:bg-warm-subtle flex items-center gap-2">Groceries</button>
-      <button onclick="switchTab('recipes')" id="nav-btn-recipes" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-white border border-warm-border text-warm-text hover:bg-warm-subtle flex items-center gap-2">Vault</button>
+      
+      <button onclick="switchTab('dashboard')" id="nav-btn-dashboard" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-emerald-600 text-white shadow-md flex items-center gap-2">
+        <i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard
+      </button>
+      <button onclick="switchTab('grocery')" id="nav-btn-grocery" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-white border border-warm-border text-warm-text hover:bg-warm-subtle flex items-center gap-2">
+        <i data-lucide="shopping-bag" class="w-4 h-4 text-amber-600"></i> Groceries
+      </button>
+      <button onclick="switchTab('recipes')" id="nav-btn-recipes" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-white border border-warm-border text-warm-text hover:bg-warm-subtle flex items-center gap-2">
+        <i data-lucide="chef-hat" class="w-4 h-4 text-rose-500"></i> Vault
+      </button>
+      
       <!-- SETTINGS BUTTON -->
-      <button onclick="openSettingsModal()" class="p-2.5 rounded-xl bg-warm-subtle border border-warm-border text-warm-text hover:bg-warm-border transition-all"><i data-lucide="settings" class="w-4 h-4"></i></button>
+      <button onclick="openSettingsModal()" class="p-2.5 rounded-xl bg-warm-subtle border border-warm-border text-warm-text hover:bg-warm-border transition-all">
+        <i data-lucide="settings" class="w-4 h-4"></i>
+      </button>
     </div>
   </header>
 
-  <!-- MAIN -->
+  <!-- ================= MAIN CONTENT ================= -->
   <main class="flex-1 p-6 overflow-hidden relative">
     
-    <!-- DASHBOARD TAB -->
+    <!-- === DASHBOARD TAB === -->
     <div id="tab-dashboard" class="h-full flex gap-6">
+      
+      <!-- LEFT: Chores -->
       <section class="w-1/2 flex flex-col warm-card rounded-3xl p-6 overflow-hidden h-full">
         <div class="flex items-center justify-between pb-4 border-b border-warm-border shrink-0">
-          <h2 class="font-display font-bold text-xl text-warm-text">Household Tasks</h2>
+          <div class="flex items-center gap-3">
+            <div class="p-3 rounded-2xl bg-emerald-100 text-emerald-800 border border-emerald-200"><i data-lucide="check-square" class="w-6 h-6"></i></div>
+            <div>
+              <h2 class="font-display font-bold text-xl text-warm-text">Household Chores</h2>
+              <p class="text-xs text-warm-muted">Me & Ryan</p>
+            </div>
+          </div>
+          <div class="flex gap-2">
+            <button onclick="openAddChoreModal()" class="p-2 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100"><i data-lucide="plus" class="w-4 h-4"></i></button>
+            <button onclick="resetChores()" class="px-3 py-1.5 rounded-xl bg-warm-subtle text-warm-muted hover:text-emerald-700 text-xs font-bold border flex items-center gap-1.5"><i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i> Reset</button>
+          </div>
         </div>
-        <div class="flex-1 overflow-y-auto my-3 space-y-2.5 pr-2" id="chores-main-container">
-            <p class="text-xs text-warm-muted text-center mt-4">Tasks will sync here once Trello is configured in Settings.</p>
-        </div>
+        <div class="flex-1 overflow-y-auto my-3 space-y-2.5 pr-2" id="chores-main-container"></div>
       </section>
 
+      <!-- RIGHT: Schedule & Meals -->
       <section class="w-1/2 flex flex-col gap-6 overflow-hidden h-full">
+        
+        <!-- Schedule -->
         <div class="h-1/2 flex flex-col warm-card rounded-3xl p-5 overflow-hidden">
           <div class="flex items-center justify-between pb-3 border-b border-warm-border shrink-0">
-            <h3 class="font-display font-bold text-base text-warm-text">Today's Schedule</h3>
-            <button onclick="openCalendarModal()" class="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 text-xs font-bold border border-blue-200">Month View</button>
+            <div class="flex items-center gap-2.5">
+              <div class="p-2.5 rounded-2xl bg-blue-50 text-blue-600 border border-blue-200"><i data-lucide="calendar" class="w-5 h-5"></i></div>
+              <div><h3 class="font-display font-bold text-base text-warm-text">Today's Schedule</h3></div>
+            </div>
+            <button onclick="openCalendarModal()" class="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold border border-blue-200">Month View</button>
           </div>
           <div class="flex-1 overflow-y-auto my-3 space-y-2 pr-1" id="today-events-container"></div>
         </div>
 
+        <!-- Meals -->
         <div class="h-1/2 flex flex-col warm-card rounded-3xl p-5 overflow-hidden">
           <div class="flex items-center justify-between pb-3 border-b border-warm-border shrink-0">
-            <h3 class="font-display font-bold text-base text-warm-text">Today's Meals</h3>
-            <button onclick="openMealPlannerModal()" class="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 text-xs font-bold border border-amber-200">Plan Week</button>
-          </div>
-          <div class="flex-1 flex flex-col justify-center my-2 gap-2" id="today-meal-slots"></div>
-        </div>
-      </section>
-    </div>
-
-    <!-- GROCERIES TAB -->
-    <div id="tab-grocery" class="h-full hidden flex-col warm-card rounded-3xl p-6 overflow-hidden">
-      <div class="flex items-center justify-between pb-5 border-b border-warm-border shrink-0">
-        <h2 class="font-display font-bold text-xl text-warm-text">Smart Grocery List</h2>
-        <button onclick="syncToTrello()" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold">Push to Trello</button>
-      </div>
-      <div class="flex-1 overflow-y-auto py-4 grid grid-cols-2 gap-4" id="grocery-categories-container">
-          <p class="text-xs text-warm-muted col-span-2">Plan meals to automatically generate grocery lists here.</p>
-      </div>
-    </div>
-
-    <!-- RECIPE VAULT TAB -->
-    <div id="tab-recipes" class="h-full hidden flex-col warm-card rounded-3xl p-6 overflow-hidden">
-      <div class="flex items-center justify-between pb-5 border-b border-warm-border shrink-0">
-        <h2 class="font-display font-bold text-xl text-warm-text">Recipe Vault</h2>
-        <button onclick="document.getElementById('modal-add-recipe').classList.remove('hidden')" class="px-4 py-2 bg-rose-500 text-white rounded-xl text-xs font-bold flex items-center gap-2"><i data-lucide="plus" class="w-4 h-4"></i> Add Recipe</button>
-      </div>
-      <div class="flex-1 overflow-y-auto py-4 grid grid-cols-4 gap-4" id="recipe-vault-grid"></div>
-    </div>
-  </main>
-
-  <!-- MODALS -->
-
-  <!-- SETTINGS MODAL -->
-  <div id="modal-settings" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-white border border-warm-border rounded-3xl max-w-md w-full p-6 shadow-xl">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="font-display font-bold text-lg text-warm-text flex items-center gap-2"><i data-lucide="settings" class="w-5 h-5 text-warm-muted"></i> Dashboard Settings</h3>
-        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500"><i data-lucide="x"></i></button>
-      </div>
-      <div class="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Google Client ID</label><input type="text" id="set-g-client" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
-        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Google API Key</label><input type="password" id="set-g-api" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
-        <hr class="my-2 border-warm-border">
-        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Trello API Key</label><input type="password" id="set-t-api" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
-        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Trello Token</label><input type="password" id="set-t-token" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
-        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Trello Grocery List ID</label><input type="text" id="set-t-list" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
-        <hr class="my-2 border-warm-border">
-        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Gemini AI Key (For Recipes)</label><input type="password" id="set-ai-api" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
-      </div>
-      <div class="flex justify-end gap-2 mt-6">
-        <button onclick="closeModals()" class="px-4 py-2 bg-warm-subtle rounded-xl text-xs font-bold">Cancel</button>
-        <button onclick="saveSettings()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold">Save Keys</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- ADD RECIPE MODAL (AI + MANUAL) -->
-  <div id="modal-add-recipe" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
-    <div class="bg-white border border-warm-border rounded-3xl max-w-lg w-full p-6 shadow-xl">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="font-display font-bold text-lg text-warm-text">Add Recipe</h3>
-        <button onclick="closeModals()" class="text-warm-muted"><i data-lucide="x"></i></button>
-      </div>
-      
-      <!-- AI Import Section -->
-      <div class="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-xl flex gap-2 items-center">
-          <input type="text" id="ai-recipe-url" placeholder="Paste recipe URL or text for AI..." class="flex-1 bg-white border border-purple-200 rounded-lg px-3 py-2 text-xs">
-          <button onclick="importAiRecipe()" class="px-3 py-2 bg-purple-600 text-white rounded-lg text-xs font-bold whitespace-nowrap">AI Import</button>
-      </div>
-
-      <div class="space-y-4">
-        <div><label class="block text-xs font-bold">Recipe Title</label><input type="text" id="input-recipe-title" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs"></div>
-        <div><label class="block text-xs font-bold">Ingredients (Format: Amount Unit Name)</label><textarea id="input-recipe-ingredients" rows="3" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs"></textarea></div>
-        <div><label class="block text-xs font-bold">Instructions (One step per line)</label><textarea id="input-recipe-instructions" rows="3" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs"></textarea></div>
-      </div>
-      <div class="flex justify-end gap-2 mt-6">
-        <button onclick="closeModals()" class="px-4 py-2 bg-warm-subtle rounded-xl text-xs font-bold">Cancel</button>
-        <button onclick="saveRecipe()" class="px-4 py-2 bg-rose-500 text-white rounded-xl text-xs font-bold">Save Recipe</button>
-      </div>
-    </div>
-  </div>
-
-  <!-- CALENDAR MODAL -->
-  <div id="modal-calendar" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-6 z-40 hidden">
-    <div class="bg-white border border-warm-border rounded-3xl max-w-4xl w-full h-[80vh] p-6 flex flex-col">
-      <div class="flex justify-between items-center pb-4 border-b shrink-0">
-        <h3 class="font-display font-bold text-xl">Weekly Schedule</h3>
-        <button onclick="closeModals()"><i data-lucide="x"></i></button>
-      </div>
-      <div class="flex-1 grid grid-cols-7 gap-2 my-4 overflow-y-auto" id="full-calendar-grid"></div>
-    </div>
-  </div>
-
-  <!-- EVENT DETAILS MODAL (Completely independent) -->
-  <div id="modal-event-details" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-[60] hidden">
-    <div class="bg-white border border-warm-border rounded-3xl max-w-sm w-full p-6 shadow-xl">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="font-display font-bold text-lg text-blue-700">Event Details</h3>
-        <!-- FIX: Only closes event details -->
-        <button onclick="closeEventDetails()" class="text-warm-muted hover:text-rose-500"><i data-lucide="x"></i></button>
-      </div>
-      <div class="space-y-4">
-        <div><label class="block text-xs font-bold text-warm-muted">Title</label><div id="detail-title" class="text-sm font-bold text-warm-text break-words"></div></div>
-        <div><label class="block text-xs font-bold text-warm-muted">Time</label><div id="detail-time" class="text-sm text-warm-text"></div></div>
-        <div><label class="block text-xs font-bold text-warm-muted">Location</label><div id="detail-loc" class="text-sm text-warm-text break-words min-w-0"></div></div>
-      </div>
-    </div>
-  </div>
-
-  <!-- MEAL PLANNER MODAL -->
-  <div id="modal-meal-planner" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-6 z-40 hidden">
-    <div class="bg-white border border-warm-border rounded-3xl max-w-5xl w-full h-[85vh] p-6 flex flex-col">
-      <div class="flex justify-between items-center pb-4 border-b shrink-0">
-        <h3 class="font-display font-bold text-xl">Meal Planner (Drag & Drop)</h3>
-        <button onclick="closeModals()"><i data-lucide="x"></i></button>
-      </div>
-      <div class="flex-1 grid grid-cols-12 gap-4 mt-4 min-h-0">
-        <div class="col-span-9 overflow-y-auto pr-2" id="meal-planner-grid"></div>
-        <div class="col-span-3 bg-warm-subtle rounded-2xl p-4 overflow-y-auto border border-warm-border" id="meal-planner-vault"></div>
-      </div>
-    </div>
-  </div>
-
-  <script>
-    // --- LOAD SECURE CONFIGURATION FROM DEVICE STORAGE ---
-    const GOOGLE_CLIENT_ID = localStorage.getItem('cfg_g_client') || '';
-    const GOOGLE_API_KEY = localStorage.getItem('cfg_g_api') || '';
-    const TRELLO_API_KEY = localStorage.getItem('cfg_t_api') || '';
-    const TRELLO_TOKEN = localStorage.getItem('cfg_t_token') || '';
-    const TRELLO_GROCERY_LIST_ID = localStorage.getItem('cfg_t_list') || '';
-    const GEMINI_API_KEY = localStorage.getItem('cfg_ai_api') || '';
-
-    // --- GLOBALS ---
-    const DAYS_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    const SLOTS = ['breakfast', 'lunch', 'dinner'];
-
-    let todayDateObj = new Date();
-    let todayFullName = todayDateObj.toLocaleDateString('en-US', { weekday: 'long' });
-    if (!DAYS_FULL.includes(todayFullName)) todayFullName = 'Monday';
-
-    let recipes = JSON.parse(localStorage.getItem('sl_recipes')) || [];
-    let events = JSON.parse(localStorage.getItem('sl_events')) || [];
-    function generateEmptyMeals() { let m = {}; DAYS_FULL.forEach(d => m[d] = { breakfast: null, lunch: null, dinner: null }); return m; }
-    let plannedMeals = JSON.parse(localStorage.getItem('sl_meals')) || generateEmptyMeals();
-
-    window.onload = function() {
-      startClock();
-      renderAll();
-      lucide.createIcons();
-    };
-
-    function saveState() {
-      localStorage.setItem('sl_recipes', JSON.stringify(recipes));
-      localStorage.setItem('sl_meals', JSON.stringify(plannedMeals));
-      renderAll();
-    }
-
-    function renderAll() {
-      renderTodayMeals();
-      renderRecipeVault();
-      renderTodayEvents();
-    }
-
-    function startClock() {
-      setInterval(() => {
-        const now = new Date();
-        document.getElementById('live-time').innerHTML = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        document.getElementById('live-date').innerText = now.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
-      }, 1000);
-    }
-
-    // --- SETTINGS MANAGEMENT ---
-    function openSettingsModal() {
-      document.getElementById('set-g-client').value = GOOGLE_CLIENT_ID;
-      document.getElementById('set-g-api').value = GOOGLE_API_KEY;
-      document.getElementById('set-t-api').value = TRELLO_API_KEY;
-      document.getElementById('set-t-token').value = TRELLO_TOKEN;
-      document.getElementById('set-t-list').value = TRELLO_GROCERY_LIST_ID;
-      document.getElementById('set-ai-api').value = GEMINI_API_KEY;
-      document.getElementById('modal-settings').classList.remove('hidden');
-    }
-
-    function saveSettings() {
-      localStorage.setItem('cfg_g_client', document.getElementById('set-g-client').value.trim());
-      localStorage.setItem('cfg_g_api', document.getElementById('set-g-api').value.trim());
-      localStorage.setItem('cfg_t_api', document.getElementById('set-t-api').value.trim());
-      localStorage.setItem('cfg_t_token', document.getElementById('set-t-token').value.trim());
-      localStorage.setItem('cfg_t_list', document.getElementById('set-t-list').value.trim());
-      localStorage.setItem('cfg_ai_api', document.getElementById('set-ai-api').value.trim());
-      window.location.reload(); // Reloads app to apply new keys safely
-    }
-
-    // --- GOOGLE CALENDAR API ---
-    let tokenClient;
-    function gapiLoaded() { gapi.load('client', initializeGapiClient); }
-    async function initializeGapiClient() {
-      if (!GOOGLE_API_KEY) return;
-      await gapi.client.init({ apiKey: GOOGLE_API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'] });
-    }
-    function gisLoaded() {
-      if (!GOOGLE_CLIENT_ID) return;
-      tokenClient = google.accounts.oauth2.initTokenClient({ client_id: GOOGLE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/calendar.readonly', callback: '' });
-    }
-
-    function handleGoogleAuth() {
-      if (!tokenClient) { alert("Please add your Google Client ID in the Settings (Gear Icon) first."); return; }
-      tokenClient.callback = async (resp) => {
-        if (resp.error !== undefined) throw (resp);
-        document.getElementById('google-sync-text').innerText = 'Synced';
-        await fetchGoogleCalendarEvents();
-      };
-      tokenClient.requestAccessToken({prompt: 'consent'});
-    }
-
-    async function fetchGoogleCalendarEvents() {
-      try {
-        const timeMin = new Date(); timeMin.setHours(0,0,0,0);
-        const timeMax = new Date(); timeMax.setDate(timeMax.getDate() + 7);
-        const response = await gapi.client.calendar.events.list({
-          'calendarId': 'primary', 'timeMin': timeMin.toISOString(), 'timeMax': timeMax.toISOString(),
-          'showDeleted': false, 'singleEvents': true, 'maxResults': 100, 'orderBy': 'startTime'
-        });
-        
-        events = response.result.items.map(item => {
-          let eventDate;
-          let timeStr = 'All Day';
-          
-          // FIX: Perfect timezone math for Google's weird UTC all-day formats
-          if (item.start.date) {
-            const [y, m, d] = item.start.date.split('-');
-            eventDate = new Date(y, m - 1, d); // Forces to your exact local midnight
-          } else {
-            eventDate = new Date(item.start.dateTime);
-            timeStr = eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-          }
-          
-          const dayStr = eventDate.toLocaleDateString('en-US', { weekday: 'long' });
-          return { id: item.id, day: DAYS_FULL.includes(dayStr) ? dayStr : todayFullName, title: item.summary, time: timeStr, location: item.location || 'No location' };
-        });
-        
-        localStorage.setItem('sl_events', JSON.stringify(events));
-        renderTodayEvents();
-      } catch (err) { console.error(err); }
-    }
-
-    // --- TABS & MODALS ---
-    function switchTab(tab) {
-      ['dashboard', 'grocery', 'recipes'].forEach(t => {
-        const el = document.getElementById(`tab-${t}`);
-        if (el) el.classList.toggle('hidden', t !== tab);
-        if (el) el.classList.toggle('flex', t === tab);
-      });
-    }
-    
-    function closeModals() { 
-      document.querySelectorAll('[id^="modal-"]').forEach(m => {
-        if(m.id !== 'modal-event-details') m.classList.add('hidden');
-      }); 
-    }
-
-    // --- SCHEDULE ---
-    function renderTodayEvents() {
-      const container = document.getElementById('today-events-container');
-      const todayEvents = events.filter(e => e.day === todayFullName);
-      container.innerHTML = todayEvents.length ? todayEvents.map(e => `
-        <div class="p-3 rounded-xl bg-white border shadow-xs cursor-pointer hover:border-blue-300" onclick="showEventDetails('${e.title.replace(/'/g, "\\'")}', '${e.time}', '${e.location.replace(/'/g, "\\'")}')">
-          <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">${e.time}</span>
-          <h4 class="text-sm font-bold mt-2 truncate">${e.title}</h4>
-        </div>`).join('') : `<p class="text-xs text-warm-muted p-2">No events</p>`;
-    }
-    
-    function openCalendarModal() {
-      document.getElementById('full-calendar-grid').innerHTML = DAYS_FULL.map(day => `
-        <div class="p-2 border rounded-xl bg-warm-subtle">
-          <div class="text-xs font-bold text-center py-1 rounded mb-2">${day}</div>
-          ${events.filter(e => e.day === day).map(e => `
-            <div class="p-1 text-[10px] bg-white border rounded mb-1 cursor-pointer hover:border-blue-400 overflow-hidden" 
-                 onclick="showEventDetails('${e.title.replace(/'/g, "\\'")}', '${e.time}', '${e.location.replace(/'/g, "\\'")}')">
-              <span class="font-bold block truncate">${e.time}</span>
-              <span class="truncate block">${e.title}</span>
-            </div>`).join('')}
-        </div>
-      `).join('');
-      document.getElementById('modal-calendar').classList.remove('hidden');
-    }
-
-    function showEventDetails(title, time, loc) {
-      document.getElementById('detail-title').innerText = title || 'Untitled';
-      document.getElementById('detail-time').innerText = time || '';
-      document.getElementById('detail-loc').innerText = loc || 'None';
-      document.getElementById('modal-event-details').classList.remove('hidden');
-    }
-    
-    function closeEventDetails() {
-      document.getElementById('modal-event-details').classList.add('hidden');
-    }
-
-    // --- MEALS ---
-    function renderTodayMeals() {
-      const container = document.getElementById('today-meal-slots');
-      container.innerHTML = '';
-      SLOTS.forEach(slot => {
-        const mealData = plannedMeals[todayFullName][slot];
-        const rec = mealData ? recipes.find(r => r.id === mealData.recipeId) : null;
-        container.innerHTML += `
-          <div class="p-3 rounded-xl bg-white border border-amber-200 cursor-pointer" onclick="openMealPlannerModal()">
-            <span class="text-[9px] uppercase font-bold text-amber-600">${slot}</span>
-            <span class="text-sm font-bold block">${rec ? rec.title : 'Unplanned'}</span>
-          </div>
-        `;
-      });
-    }
-
-    function openMealPlannerModal() {
-      renderMealPlannerGrid(); renderMealPlannerVault();
-      document.getElementById('modal-meal-planner').classList.remove('hidden');
-    }
-
-    function renderMealPlannerGrid() {
-      document.getElementById('meal-planner-grid').innerHTML = DAYS_FULL.map(day => `
-        <div class="mb-4 bg-white border rounded-2xl p-3">
-          <h4 class="font-bold text-sm uppercase">${day}</h4>
-          <div class="grid grid-cols-3 gap-3">
-            ${SLOTS.map(slot => {
-              const mealData = plannedMeals[day][slot];
-              const rec = mealData ? recipes.find(r => r.id === mealData.recipeId) : null;
-              return `
-                <div class="border-2 border-dashed rounded-xl p-2 min-h-[70px] flex flex-col justify-center items-center bg-warm-subtle/30"
-                     ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDropMeal(event, '${day}', '${slot}')">
-                  <span class="text-[9px] font-bold uppercase">${slot}</span>${rec ? `<div class="draggable-item bg-amber-50 text-amber-900 rounded p-1 text-xs w-full mt-1" draggable="true" ondragstart="onDragMealSlotStart(event, '${day}', '${slot}', '${rec.id}')">${rec.title}</div>` : ''}
-                </div>
-              `;
-            }).join('')}
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function renderMealPlannerVault() {
-      document.getElementById('meal-planner-vault').innerHTML = recipes.map(r => `
-        <div class="draggable-item p-3 rounded-xl bg-white border cursor-grab mb-2" draggable="true" ondragstart="onDragRecipeStart(event, '${r.id}')">
-          <div class="font-bold text-sm">${r.title}</div>
-        </div>
-      `).join('');
-    }
-
-    function onDragRecipeStart(e, id) { e.dataTransfer.setData('json', JSON.stringify({ action: 'copy', recipeId: id })); }
-    function onDragMealSlotStart(e, day, slot, id) { e.dataTransfer.setData('json', JSON.stringify({ action: 'move', fromDay
+            <div class
