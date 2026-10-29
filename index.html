@@ -5,21 +5,6 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Family Command Center</title>
 
-  <!-- ========================================================== -->
-  <!-- 🛑 YOUR API KEYS GO HERE -->
-  <script>
-    const TRELLO_API_KEY = '';
-    const TRELLO_TOKEN = '';
-    const TRELLO_GROCERY_LIST_ID = '';
-    const TRELLO_TASKS_LIST_ID = ''; // Optional: For a separate Trello Task list
-    
-    const GOOGLE_CLIENT_ID = '';
-    const GOOGLE_API_KEY = '';
-    
-    const GEMINI_API_KEY = ''; // Optional: For AI recipe imports
-  </script>
-  <!-- ========================================================== -->
-
   <!-- Tailwind CSS & Icons -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
@@ -54,12 +39,14 @@
       </div>
     </div>
     <div class="flex items-center gap-4">
-      <button onclick="handleGoogleAuth()" id="google-sync-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold mr-2 transition-all">
-        <span id="google-dot" class="w-2 h-2 rounded-full bg-blue-400"></span><i data-lucide="calendar" class="w-3.5 h-3.5 text-blue-600"></i><span id="google-sync-text">Connect GCalendar</span>
+      <button onclick="handleGoogleAuth()" id="google-sync-badge" class="flex items-center gap-2 px-3 py-1.5 rounded-full bg-blue-50 border border-blue-200 text-blue-800 text-xs font-semibold transition-all">
+        <span id="google-dot" class="w-2 h-2 rounded-full bg-blue-400"></span><i data-lucide="calendar" class="w-3.5 h-3.5 text-blue-600"></i><span id="google-sync-text">Connect</span>
       </button>
       <button onclick="switchTab('dashboard')" id="nav-btn-dashboard" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-emerald-600 text-white shadow-md flex items-center gap-2">Dashboard</button>
       <button onclick="switchTab('grocery')" id="nav-btn-grocery" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-white border border-warm-border text-warm-text hover:bg-warm-subtle flex items-center gap-2">Groceries</button>
       <button onclick="switchTab('recipes')" id="nav-btn-recipes" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-white border border-warm-border text-warm-text hover:bg-warm-subtle flex items-center gap-2">Vault</button>
+      <!-- SETTINGS BUTTON -->
+      <button onclick="openSettingsModal()" class="p-2.5 rounded-xl bg-warm-subtle border border-warm-border text-warm-text hover:bg-warm-border transition-all"><i data-lucide="settings" class="w-4 h-4"></i></button>
     </div>
   </header>
 
@@ -69,10 +56,12 @@
     <!-- DASHBOARD TAB -->
     <div id="tab-dashboard" class="h-full flex gap-6">
       <section class="w-1/2 flex flex-col warm-card rounded-3xl p-6 overflow-hidden h-full">
-        <div class="flex flex-col gap-3 pb-4 border-b border-warm-border shrink-0">
-          <h2 class="font-display font-bold text-xl text-warm-text">Household Chores</h2>
+        <div class="flex items-center justify-between pb-4 border-b border-warm-border shrink-0">
+          <h2 class="font-display font-bold text-xl text-warm-text">Household Tasks</h2>
         </div>
-        <div class="flex-1 overflow-y-auto my-3 space-y-2.5 pr-2" id="chores-main-container"></div>
+        <div class="flex-1 overflow-y-auto my-3 space-y-2.5 pr-2" id="chores-main-container">
+            <p class="text-xs text-warm-muted text-center mt-4">Tasks will sync here once Trello is configured in Settings.</p>
+        </div>
       </section>
 
       <section class="w-1/2 flex flex-col gap-6 overflow-hidden h-full">
@@ -100,20 +89,46 @@
         <h2 class="font-display font-bold text-xl text-warm-text">Smart Grocery List</h2>
         <button onclick="syncToTrello()" class="px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-bold">Push to Trello</button>
       </div>
-      <div class="flex-1 overflow-y-auto py-4 grid grid-cols-2 gap-4" id="grocery-categories-container"></div>
+      <div class="flex-1 overflow-y-auto py-4 grid grid-cols-2 gap-4" id="grocery-categories-container">
+          <p class="text-xs text-warm-muted col-span-2">Plan meals to automatically generate grocery lists here.</p>
+      </div>
     </div>
 
     <!-- RECIPE VAULT TAB -->
     <div id="tab-recipes" class="h-full hidden flex-col warm-card rounded-3xl p-6 overflow-hidden">
       <div class="flex items-center justify-between pb-5 border-b border-warm-border shrink-0">
         <h2 class="font-display font-bold text-xl text-warm-text">Recipe Vault</h2>
-        <button onclick="document.getElementById('modal-add-recipe').classList.remove('hidden')" class="px-4 py-2 bg-rose-500 text-white rounded-xl text-xs font-bold">Add Recipe</button>
+        <button onclick="document.getElementById('modal-add-recipe').classList.remove('hidden')" class="px-4 py-2 bg-rose-500 text-white rounded-xl text-xs font-bold flex items-center gap-2"><i data-lucide="plus" class="w-4 h-4"></i> Add Recipe</button>
       </div>
       <div class="flex-1 overflow-y-auto py-4 grid grid-cols-4 gap-4" id="recipe-vault-grid"></div>
     </div>
   </main>
 
   <!-- MODALS -->
+
+  <!-- SETTINGS MODAL -->
+  <div id="modal-settings" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white border border-warm-border rounded-3xl max-w-md w-full p-6 shadow-xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-display font-bold text-lg text-warm-text flex items-center gap-2"><i data-lucide="settings" class="w-5 h-5 text-warm-muted"></i> Dashboard Settings</h3>
+        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500"><i data-lucide="x"></i></button>
+      </div>
+      <div class="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Google Client ID</label><input type="text" id="set-g-client" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
+        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Google API Key</label><input type="password" id="set-g-api" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
+        <hr class="my-2 border-warm-border">
+        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Trello API Key</label><input type="password" id="set-t-api" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
+        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Trello Token</label><input type="password" id="set-t-token" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
+        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Trello Grocery List ID</label><input type="text" id="set-t-list" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
+        <hr class="my-2 border-warm-border">
+        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Gemini AI Key (For Recipes)</label><input type="password" id="set-ai-api" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
+      </div>
+      <div class="flex justify-end gap-2 mt-6">
+        <button onclick="closeModals()" class="px-4 py-2 bg-warm-subtle rounded-xl text-xs font-bold">Cancel</button>
+        <button onclick="saveSettings()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold">Save Keys</button>
+      </div>
+    </div>
+  </div>
 
   <!-- ADD RECIPE MODAL (AI + MANUAL) -->
   <div id="modal-add-recipe" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
@@ -122,13 +137,20 @@
         <h3 class="font-display font-bold text-lg text-warm-text">Add Recipe</h3>
         <button onclick="closeModals()" class="text-warm-muted"><i data-lucide="x"></i></button>
       </div>
+      
+      <!-- AI Import Section -->
+      <div class="mb-4 p-3 bg-purple-50 border border-purple-200 rounded-xl flex gap-2 items-center">
+          <input type="text" id="ai-recipe-url" placeholder="Paste recipe URL or text for AI..." class="flex-1 bg-white border border-purple-200 rounded-lg px-3 py-2 text-xs">
+          <button onclick="importAiRecipe()" class="px-3 py-2 bg-purple-600 text-white rounded-lg text-xs font-bold whitespace-nowrap">AI Import</button>
+      </div>
+
       <div class="space-y-4">
-        <div><label class="block text-xs font-bold">Recipe Title</label><input type="text" id="input-recipe-title" class="w-full bg-warm-subtle border border-warm-border rounded-xl px-3 py-2 text-xs"></div>
+        <div><label class="block text-xs font-bold">Recipe Title</label><input type="text" id="input-recipe-title" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs"></div>
         <div><label class="block text-xs font-bold">Ingredients (Format: Amount Unit Name)</label><textarea id="input-recipe-ingredients" rows="3" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs"></textarea></div>
-        <div><label class="block text-xs font-bold">Instructions</label><textarea id="input-recipe-instructions" rows="3" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs"></textarea></div>
+        <div><label class="block text-xs font-bold">Instructions (One step per line)</label><textarea id="input-recipe-instructions" rows="3" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs"></textarea></div>
       </div>
       <div class="flex justify-end gap-2 mt-6">
-        <button onclick="closeModals()" class="px-4 py-2 bg-warm-subtle rounded-xl text-xs font-bold text-warm-text">Cancel</button>
+        <button onclick="closeModals()" class="px-4 py-2 bg-warm-subtle rounded-xl text-xs font-bold">Cancel</button>
         <button onclick="saveRecipe()" class="px-4 py-2 bg-rose-500 text-white rounded-xl text-xs font-bold">Save Recipe</button>
       </div>
     </div>
@@ -145,12 +167,12 @@
     </div>
   </div>
 
-  <!-- EVENT DETAILS MODAL (Now completely independent from closeModals) -->
+  <!-- EVENT DETAILS MODAL (Completely independent) -->
   <div id="modal-event-details" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-[60] hidden">
     <div class="bg-white border border-warm-border rounded-3xl max-w-sm w-full p-6 shadow-xl">
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-display font-bold text-lg text-blue-700">Event Details</h3>
-        <!-- FIX: Only calls closeEventDetails(), does NOT close calendar -->
+        <!-- FIX: Only closes event details -->
         <button onclick="closeEventDetails()" class="text-warm-muted hover:text-rose-500"><i data-lucide="x"></i></button>
       </div>
       <div class="space-y-4">
@@ -176,6 +198,15 @@
   </div>
 
   <script>
+    // --- LOAD SECURE CONFIGURATION FROM DEVICE STORAGE ---
+    const GOOGLE_CLIENT_ID = localStorage.getItem('cfg_g_client') || '';
+    const GOOGLE_API_KEY = localStorage.getItem('cfg_g_api') || '';
+    const TRELLO_API_KEY = localStorage.getItem('cfg_t_api') || '';
+    const TRELLO_TOKEN = localStorage.getItem('cfg_t_token') || '';
+    const TRELLO_GROCERY_LIST_ID = localStorage.getItem('cfg_t_list') || '';
+    const GEMINI_API_KEY = localStorage.getItem('cfg_ai_api') || '';
+
+    // --- GLOBALS ---
     const DAYS_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
     const SLOTS = ['breakfast', 'lunch', 'dinner'];
 
@@ -184,9 +215,7 @@
     if (!DAYS_FULL.includes(todayFullName)) todayFullName = 'Monday';
 
     let recipes = JSON.parse(localStorage.getItem('sl_recipes')) || [];
-    let chores = JSON.parse(localStorage.getItem('sl_chores')) || [];
     let events = JSON.parse(localStorage.getItem('sl_events')) || [];
-    
     function generateEmptyMeals() { let m = {}; DAYS_FULL.forEach(d => m[d] = { breakfast: null, lunch: null, dinner: null }); return m; }
     let plannedMeals = JSON.parse(localStorage.getItem('sl_meals')) || generateEmptyMeals();
 
@@ -216,6 +245,27 @@
       }, 1000);
     }
 
+    // --- SETTINGS MANAGEMENT ---
+    function openSettingsModal() {
+      document.getElementById('set-g-client').value = GOOGLE_CLIENT_ID;
+      document.getElementById('set-g-api').value = GOOGLE_API_KEY;
+      document.getElementById('set-t-api').value = TRELLO_API_KEY;
+      document.getElementById('set-t-token').value = TRELLO_TOKEN;
+      document.getElementById('set-t-list').value = TRELLO_GROCERY_LIST_ID;
+      document.getElementById('set-ai-api').value = GEMINI_API_KEY;
+      document.getElementById('modal-settings').classList.remove('hidden');
+    }
+
+    function saveSettings() {
+      localStorage.setItem('cfg_g_client', document.getElementById('set-g-client').value.trim());
+      localStorage.setItem('cfg_g_api', document.getElementById('set-g-api').value.trim());
+      localStorage.setItem('cfg_t_api', document.getElementById('set-t-api').value.trim());
+      localStorage.setItem('cfg_t_token', document.getElementById('set-t-token').value.trim());
+      localStorage.setItem('cfg_t_list', document.getElementById('set-t-list').value.trim());
+      localStorage.setItem('cfg_ai_api', document.getElementById('set-ai-api').value.trim());
+      window.location.reload(); // Reloads app to apply new keys safely
+    }
+
     // --- GOOGLE CALENDAR API ---
     let tokenClient;
     function gapiLoaded() { gapi.load('client', initializeGapiClient); }
@@ -229,7 +279,7 @@
     }
 
     function handleGoogleAuth() {
-      if (!tokenClient) return;
+      if (!tokenClient) { alert("Please add your Google Client ID in the Settings (Gear Icon) first."); return; }
       tokenClient.callback = async (resp) => {
         if (resp.error !== undefined) throw (resp);
         document.getElementById('google-sync-text').innerText = 'Synced';
@@ -240,37 +290,28 @@
 
     async function fetchGoogleCalendarEvents() {
       try {
-        // Fetch 1 week of events
         const timeMin = new Date(); timeMin.setHours(0,0,0,0);
         const timeMax = new Date(); timeMax.setDate(timeMax.getDate() + 7);
-
         const response = await gapi.client.calendar.events.list({
           'calendarId': 'primary', 'timeMin': timeMin.toISOString(), 'timeMax': timeMax.toISOString(),
           'showDeleted': false, 'singleEvents': true, 'maxResults': 100, 'orderBy': 'startTime'
         });
         
-        const items = response.result.items;
-        events = items.map(item => {
+        events = response.result.items.map(item => {
           let eventDate;
           let timeStr = 'All Day';
           
-          // FIX: Handle timezone logic strictly so UTC all-day events don't get shifted to yesterday
+          // FIX: Perfect timezone math for Google's weird UTC all-day formats
           if (item.start.date) {
-            const parts = item.start.date.split('-');
-            eventDate = new Date(parts[0], parts[1] - 1, parts[2]); // Forces local midnight
+            const [y, m, d] = item.start.date.split('-');
+            eventDate = new Date(y, m - 1, d); // Forces to your exact local midnight
           } else {
             eventDate = new Date(item.start.dateTime);
             timeStr = eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
           }
           
           const dayStr = eventDate.toLocaleDateString('en-US', { weekday: 'long' });
-          return { 
-            id: item.id, 
-            day: DAYS_FULL.includes(dayStr) ? dayStr : todayFullName, 
-            title: item.summary, 
-            time: timeStr,
-            location: item.location || 'No location'
-          };
+          return { id: item.id, day: DAYS_FULL.includes(dayStr) ? dayStr : todayFullName, title: item.summary, time: timeStr, location: item.location || 'No location' };
         });
         
         localStorage.setItem('sl_events', JSON.stringify(events));
@@ -287,7 +328,6 @@
       });
     }
     
-    // This ONLY closes main level modals, it ignores the event details popup
     function closeModals() { 
       document.querySelectorAll('[id^="modal-"]').forEach(m => {
         if(m.id !== 'modal-event-details') m.classList.add('hidden');
@@ -299,15 +339,15 @@
       const container = document.getElementById('today-events-container');
       const todayEvents = events.filter(e => e.day === todayFullName);
       container.innerHTML = todayEvents.length ? todayEvents.map(e => `
-        <div class="p-3 rounded-xl bg-white border border-warm-border shadow-xs cursor-pointer hover:border-blue-300" onclick="showEventDetails('${e.title.replace(/'/g, "\\'")}', '${e.time}', '${e.location.replace(/'/g, "\\'")}')">
+        <div class="p-3 rounded-xl bg-white border shadow-xs cursor-pointer hover:border-blue-300" onclick="showEventDetails('${e.title.replace(/'/g, "\\'")}', '${e.time}', '${e.location.replace(/'/g, "\\'")}')">
           <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded">${e.time}</span>
           <h4 class="text-sm font-bold mt-2 truncate">${e.title}</h4>
-        </div>`).join('') : `<p class="text-xs p-2">No events</p>`;
+        </div>`).join('') : `<p class="text-xs text-warm-muted p-2">No events</p>`;
     }
     
     function openCalendarModal() {
       document.getElementById('full-calendar-grid').innerHTML = DAYS_FULL.map(day => `
-        <div class="p-2 border rounded-xl bg-warm-subtle border-warm-border">
+        <div class="p-2 border rounded-xl bg-warm-subtle">
           <div class="text-xs font-bold text-center py-1 rounded mb-2">${day}</div>
           ${events.filter(e => e.day === day).map(e => `
             <div class="p-1 text-[10px] bg-white border rounded mb-1 cursor-pointer hover:border-blue-400 overflow-hidden" 
@@ -320,7 +360,6 @@
       document.getElementById('modal-calendar').classList.remove('hidden');
     }
 
-    // FIX: Opens cleanly on top
     function showEventDetails(title, time, loc) {
       document.getElementById('detail-title').innerText = title || 'Untitled';
       document.getElementById('detail-time').innerText = time || '';
@@ -328,7 +367,6 @@
       document.getElementById('modal-event-details').classList.remove('hidden');
     }
     
-    // FIX: Closes cleanly without destroying calendar view underneath
     function closeEventDetails() {
       document.getElementById('modal-event-details').classList.add('hidden');
     }
@@ -365,8 +403,7 @@
               return `
                 <div class="border-2 border-dashed rounded-xl p-2 min-h-[70px] flex flex-col justify-center items-center bg-warm-subtle/30"
                      ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDropMeal(event, '${day}', '${slot}')">
-                  <span class="text-[9px] font-bold uppercase">${slot}</span>
-                  ${rec ? `<div class="draggable-item bg-amber-50 text-amber-900 rounded p-1 text-xs w-full mt-1" draggable="true" ondragstart="onDragMealSlotStart(event, '${day}', '${slot}', '${rec.id}')">${rec.title}</div>` : ''}
+                  <span class="text-[9px] font-bold uppercase">${slot}</span>${rec ? `<div class="draggable-item bg-amber-50 text-amber-900 rounded p-1 text-xs w-full mt-1" draggable="true" ondragstart="onDragMealSlotStart(event, '${day}', '${slot}', '${rec.id}')">${rec.title}</div>` : ''}
                 </div>
               `;
             }).join('')}
@@ -384,29 +421,4 @@
     }
 
     function onDragRecipeStart(e, id) { e.dataTransfer.setData('json', JSON.stringify({ action: 'copy', recipeId: id })); }
-    function onDragMealSlotStart(e, day, slot, id) { e.dataTransfer.setData('json', JSON.stringify({ action: 'move', fromDay: day, fromSlot: slot, recipeId: id })); }
-    function onDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over-active'); }
-    function onDragLeave(e) { e.currentTarget.classList.remove('drag-over-active'); }
-    function onDropMeal(e, day, slot) {
-      e.preventDefault(); e.currentTarget.classList.remove('drag-over-active');
-      const payload = JSON.parse(e.dataTransfer.getData('json'));
-      if (payload.action === 'move') plannedMeals[payload.fromDay][payload.fromSlot] = null;
-      plannedMeals[day][slot] = { recipeId: payload.recipeId, cook: 'Me' };
-      saveState(); renderMealPlannerGrid();
-    }
-
-    function renderRecipeVault() {
-      document.getElementById('recipe-vault-grid').innerHTML = recipes.map(r => `
-        <div class="warm-card rounded-2xl p-4"><h3 class="font-bold text-lg">${r.title}</h3></div>
-      `).join('');
-    }
-
-    function saveRecipe() {
-      const title = document.getElementById('input-recipe-title').value.trim();
-      if (!title) return;
-      recipes.push({ id: 'r' + Date.now(), title, ingredients: [], instructions: [] });
-      saveState(); closeModals();
-    }
-  </script>
-</body>
-</html>
+    function onDragMealSlotStart(e, day, slot, id) { e.dataTransfer.setData('json', JSON.stringify({ action: 'move', fromDay
