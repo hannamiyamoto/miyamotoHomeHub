@@ -108,4 +108,742 @@
         <!-- Meals -->
         <div class="h-1/2 flex flex-col warm-card rounded-3xl p-5 overflow-hidden">
           <div class="flex items-center justify-between pb-3 border-b border-warm-border shrink-0">
-            <div class
+            <div class="flex items-center gap-2.5">
+              <div class="p-2.5 rounded-2xl bg-amber-50 text-amber-700 border border-amber-200"><i data-lucide="utensils" class="w-5 h-5"></i></div>
+              <div><h3 class="font-display font-bold text-base text-warm-text">Today's Meals</h3></div>
+            </div>
+            <button onclick="openMealPlannerModal()" class="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs font-bold border border-amber-200">Plan Week</button>
+          </div>
+          <div class="flex-1 flex flex-col justify-center my-2 gap-2" id="today-meal-slots"></div>
+        </div>
+      </section>
+    </div>
+
+    <!-- === GROCERIES TAB === -->
+    <div id="tab-grocery" class="h-full hidden flex-col warm-card rounded-3xl p-6 overflow-hidden">
+      <div class="flex items-center justify-between pb-5 border-b border-warm-border shrink-0">
+        <div>
+          <h2 class="font-display font-bold text-xl text-warm-text">Smart Grocery List</h2>
+          <p class="text-xs text-warm-muted">Auto-extracted from your planned meals.</p>
+        </div>
+        <div class="flex gap-4">
+           <div class="flex gap-2">
+             <input type="text" id="manual-grocery-input" placeholder="Add custom item..." class="px-3 py-2 border border-warm-border rounded-xl text-xs bg-warm-subtle w-48">
+             <button onclick="addManualGrocery()" class="px-3 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold">Add</button>
+           </div>
+           <button onclick="syncToTrello()" id="trello-sync-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-2">
+             <i data-lucide="trello" class="w-4 h-4"></i> Push to Trello
+           </button>
+        </div>
+      </div>
+      <div class="flex-1 overflow-y-auto py-4 flex gap-6">
+        <div class="w-2/3 grid grid-cols-2 gap-4 h-max" id="grocery-categories-container"></div>
+        <div class="w-1/3 bg-warm-subtle border border-warm-border rounded-2xl p-4 h-max">
+          <h3 class="font-bold text-sm text-warm-text mb-1 flex items-center gap-2"><i data-lucide="box" class="w-4 h-4 text-emerald-600"></i> Pantry Staples</h3>
+          <p class="text-[10px] text-warm-muted mb-4 leading-snug">Checked items are in stock and skip the grocery list.</p>
+          <div id="pantry-staples-container" class="space-y-2"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- === RECIPE VAULT TAB === -->
+    <div id="tab-recipes" class="h-full hidden flex-col warm-card rounded-3xl p-6 overflow-hidden">
+      <div class="flex items-center justify-between pb-5 border-b border-warm-border shrink-0">
+        <h2 class="font-display font-bold text-xl text-warm-text">Recipe Vault</h2>
+        <button onclick="document.getElementById('modal-add-recipe').classList.remove('hidden')" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold flex items-center gap-2">
+          <i data-lucide="plus" class="w-4 h-4"></i> Add Recipe
+        </button>
+      </div>
+      <div class="flex-1 overflow-y-auto py-4 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4" id="recipe-vault-grid"></div>
+    </div>
+  </main>
+
+  <!-- ================= MODALS ================= -->
+
+  <!-- SETTINGS MODAL -->
+  <div id="modal-settings" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white border border-warm-border rounded-3xl max-w-md w-full p-6 shadow-xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-display font-bold text-lg text-warm-text flex items-center gap-2"><i data-lucide="settings" class="w-5 h-5 text-warm-muted"></i> Dashboard Settings</h3>
+        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500"><i data-lucide="x"></i></button>
+      </div>
+      <div class="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
+        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Google Client ID</label><input type="text" id="set-g-client" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
+        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Google API Key</label><input type="password" id="set-g-api" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
+        <hr class="my-2 border-warm-border">
+        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Trello REST API Key</label><input type="password" id="set-t-api" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
+        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Trello Token</label><input type="password" id="set-t-token" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
+        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Trello Grocery List ID</label><input type="text" id="set-t-list" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
+        <hr class="my-2 border-warm-border">
+        <div><label class="block text-[10px] font-bold uppercase text-purple-600 mb-1">Gemini AI Key (For Recipes)</label><input type="password" id="set-ai-api" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
+      </div>
+      <div class="flex justify-end gap-2 mt-6">
+        <button onclick="closeModals()" class="px-4 py-2 bg-warm-subtle rounded-xl text-xs font-bold text-warm-text">Cancel</button>
+        <button onclick="saveSettings()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold">Save Keys</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD RECIPE MODAL (AI + MANUAL) -->
+  <div id="modal-add-recipe" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white border border-warm-border rounded-3xl max-w-lg w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-display font-bold text-lg text-warm-text">Add Recipe</h3>
+        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500"><i data-lucide="x"></i></button>
+      </div>
+      
+      <!-- AI Import Section -->
+      <div class="mb-4 p-4 bg-purple-50 border border-purple-200 rounded-xl flex flex-col gap-2">
+          <label class="text-[10px] font-bold uppercase text-purple-700 flex items-center gap-1"><i data-lucide="sparkles" class="w-3 h-3"></i> AI Auto-Import</label>
+          <div class="flex gap-2">
+            <input type="text" id="ai-recipe-url" placeholder="Paste recipe URL or text..." class="flex-1 bg-white border border-purple-200 rounded-lg px-3 py-2 text-xs">
+            <button onclick="importAiRecipe()" id="ai-btn" class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold transition-all">Import</button>
+          </div>
+      </div>
+
+      <div class="space-y-4">
+        <div><label class="block text-xs font-bold text-warm-text">Recipe Title</label><input type="text" id="input-recipe-title" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs"></div>
+        <div><label class="block text-xs font-bold text-warm-text">Ingredients (Format: Amount Unit Name)</label><textarea id="input-recipe-ingredients" rows="3" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs"></textarea></div>
+        <div><label class="block text-xs font-bold text-warm-text">Instructions</label><textarea id="input-recipe-instructions" rows="3" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs"></textarea></div>
+      </div>
+      <div class="flex justify-end gap-2 mt-6">
+        <button onclick="closeModals()" class="px-4 py-2 bg-warm-subtle rounded-xl text-xs font-bold text-warm-text">Cancel</button>
+        <button onclick="saveRecipe()" class="px-4 py-2 bg-rose-500 text-white rounded-xl text-xs font-bold">Save Recipe</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ADD CHORE MODAL -->
+  <div id="modal-add-chore" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden">
+    <div class="bg-white border border-warm-border rounded-3xl max-w-sm w-full p-6 shadow-xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-display font-bold text-lg text-warm-text">Add Chore</h3>
+        <button onclick="closeModals()" class="text-warm-muted"><i data-lucide="x"></i></button>
+      </div>
+      <div class="space-y-4">
+        <div><label class="block text-xs font-bold mb-1">Task Name</label><input type="text" id="input-chore-title" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs"></div>
+        <div>
+          <label class="block text-xs font-bold mb-2">Assignees</label>
+          <div class="flex gap-4">
+            <label class="flex items-center gap-2 text-xs"><input type="checkbox" id="input-chore-me" value="Me" class="rounded text-emerald-600"> Me</label>
+            <label class="flex items-center gap-2 text-xs"><input type="checkbox" id="input-chore-ryan" value="Ryan" class="rounded text-emerald-600"> Ryan</label>
+          </div>
+        </div>
+      </div>
+      <div class="flex justify-end gap-2 mt-6">
+        <button onclick="closeModals()" class="px-4 py-2 bg-warm-subtle rounded-xl text-xs font-bold">Cancel</button>
+        <button onclick="saveChore()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold">Add Task</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- CALENDAR MODAL (MONTH VIEW) -->
+  <div id="modal-calendar" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-6 z-40 hidden">
+    <div class="bg-white border border-warm-border rounded-3xl max-w-4xl w-full h-[80vh] p-6 flex flex-col shadow-2xl">
+      <div class="flex justify-between items-center pb-4 border-b shrink-0">
+        <h3 class="font-display font-bold text-xl flex items-center gap-2"><i data-lucide="calendar" class="text-blue-600"></i> Weekly Schedule</h3>
+        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500"><i data-lucide="x"></i></button>
+      </div>
+      <div class="flex-1 grid grid-cols-7 gap-2 my-4 overflow-y-auto" id="full-calendar-grid"></div>
+    </div>
+  </div>
+
+  <!-- EVENT DETAILS MODAL (Independent z-index so it sits on top) -->
+  <div id="modal-event-details" class="fixed inset-0 bg-black/20 backdrop-blur-sm flex items-center justify-center p-4 z-[60] hidden">
+    <div class="bg-white border border-warm-border rounded-3xl max-w-sm w-full p-6 shadow-2xl">
+      <div class="flex justify-between items-center mb-4">
+        <h3 class="font-display font-bold text-lg text-blue-700 flex items-center gap-2"><i data-lucide="info" class="w-5 h-5"></i> Details</h3>
+        <!-- FIX: Only closes event details, leaves month view open -->
+        <button onclick="closeEventDetails()" class="text-warm-muted hover:text-rose-500"><i data-lucide="x"></i></button>
+      </div>
+      <div class="space-y-4">
+        <div><label class="block text-[10px] font-bold uppercase text-warm-muted">Title</label><div id="detail-title" class="text-sm font-bold text-warm-text break-words"></div></div>
+        <div><label class="block text-[10px] font-bold uppercase text-warm-muted">Time</label><div id="detail-time" class="text-sm text-warm-text"></div></div>
+        <div><label class="block text-[10px] font-bold uppercase text-warm-muted">Location</label><div id="detail-loc" class="text-sm text-warm-text break-words min-w-0"></div></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MEAL PLANNER MODAL -->
+  <div id="modal-meal-planner" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-6 z-40 hidden">
+    <div class="bg-white border border-warm-border rounded-3xl max-w-5xl w-full h-[85vh] p-6 flex flex-col shadow-2xl">
+      <div class="flex justify-between items-center pb-4 border-b shrink-0">
+        <div class="flex items-center gap-3">
+            <div class="p-2 bg-amber-50 rounded-xl text-amber-700"><i data-lucide="utensils" class="w-5 h-5"></i></div>
+            <div>
+              <h3 class="font-display font-bold text-xl">Meal Planner</h3>
+              <p class="text-xs text-warm-muted">Drag recipes into calendar slots.</p>
+            </div>
+        </div>
+        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500"><i data-lucide="x"></i></button>
+      </div>
+      <div class="flex-1 grid grid-cols-12 gap-4 mt-4 min-h-0">
+        <div class="col-span-9 overflow-y-auto pr-2" id="meal-planner-grid"></div>
+        <div class="col-span-3 bg-warm-subtle rounded-2xl p-4 overflow-y-auto border border-warm-border" id="meal-planner-vault"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- COOK MODE MODAL -->
+  <div id="modal-cook-mode" class="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center p-8 z-50 hidden">
+    <div class="bg-white rounded-3xl max-w-3xl w-full max-h-full overflow-y-auto p-8 relative shadow-2xl">
+      <button onclick="closeModals()" class="absolute top-6 right-6 p-2 bg-warm-subtle rounded-xl text-warm-muted hover:text-rose-500"><i data-lucide="x"></i></button>
+      <h2 id="cook-title" class="font-display font-bold text-3xl text-warm-text mb-6">Recipe</h2>
+      <div class="grid grid-cols-3 gap-8">
+        <div class="col-span-1 border-r border-warm-border pr-4">
+          <h4 class="font-bold text-sm text-warm-text mb-3 uppercase tracking-wider text-rose-600">Ingredients</h4>
+          <ul id="cook-ingredients" class="space-y-2 text-sm text-warm-text"></ul>
+        </div>
+        <div class="col-span-2">
+          <h4 class="font-bold text-sm text-warm-text mb-3 uppercase tracking-wider text-emerald-600">Instructions</h4>
+          <ol id="cook-instructions" class="space-y-4 list-decimal pl-5 text-warm-text text-sm leading-relaxed marker:font-bold marker:text-emerald-500"></ol>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= JAVASCRIPT LOGIC ================= -->
+  <script>
+    // --- 1. LOAD SECURE KEYS FROM LOCAL STORAGE ---
+    const GOOGLE_CLIENT_ID = localStorage.getItem('cfg_g_client') || '';
+    const GOOGLE_API_KEY = localStorage.getItem('cfg_g_api') || '';
+    const TRELLO_API_KEY = localStorage.getItem('cfg_t_api') || '';
+    const TRELLO_TOKEN = localStorage.getItem('cfg_t_token') || '';
+    const TRELLO_GROCERY_LIST_ID = localStorage.getItem('cfg_t_list') || '';
+    const GEMINI_API_KEY = localStorage.getItem('cfg_ai_api') || '';
+
+    // --- 2. GLOBALS & STATE INITIALIZATION ---
+    const DAYS_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
+    const SLOTS = ['breakfast', 'lunch', 'dinner'];
+
+    let todayDateObj = new Date();
+    let todayFullName = todayDateObj.toLocaleDateString('en-US', { weekday: 'long' });
+    if (!DAYS_FULL.includes(todayFullName)) todayFullName = 'Monday';
+
+    // Safely parse JSON from storage to prevent crashes if corrupt
+    function safeJSONParse(key, fallback) {
+        try {
+            const val = localStorage.getItem(key);
+            return val ? JSON.parse(val) : fallback;
+        } catch (e) { return fallback; }
+    }
+
+    let recipes = safeJSONParse('sl_recipes', []);
+    let chores = safeJSONParse('sl_chores', []);
+    let events = safeJSONParse('sl_events', []);
+    let manualGroceries = safeJSONParse('sl_manual_groceries', []);
+    let pantry = safeJSONParse('sl_pantry', { 'Soy Sauce': true, 'White Rice': true, 'Olive Oil': true, 'Salt': true });
+    
+    function generateEmptyMeals() { 
+        let m = {}; 
+        DAYS_FULL.forEach(d => m[d] = { breakfast: null, lunch: null, dinner: null }); 
+        return m; 
+    }
+    
+    let plannedMeals = safeJSONParse('sl_meals', null);
+    if (!plannedMeals || !plannedMeals['Monday']) plannedMeals = generateEmptyMeals(); // Robust fallback
+
+    let generatedGroceries = [];
+
+    // --- 3. ONLOAD INITIALIZATION ---
+    window.onload = function() {
+      try {
+          startClock();
+          extractGroceries(); // Crucial: Extract groceries BEFORE rendering tabs
+          renderAll();
+      } catch (err) {
+          console.error("Initialization Error:", err);
+      }
+    };
+
+    function saveState() {
+      localStorage.setItem('sl_recipes', JSON.stringify(recipes));
+      localStorage.setItem('sl_chores', JSON.stringify(chores));
+      localStorage.setItem('sl_meals', JSON.stringify(plannedMeals));
+      localStorage.setItem('sl_pantry', JSON.stringify(pantry));
+      localStorage.setItem('sl_manual_groceries', JSON.stringify(manualGroceries));
+      extractGroceries();
+      renderAll();
+    }
+
+    function renderAll() {
+      renderChores();
+      renderTodayMeals();
+      renderRecipeVault();
+      renderTodayEvents();
+      renderGroceriesTab();
+      if(window.lucide) lucide.createIcons(); // Refresh icons after rendering
+    }
+
+    function startClock() {
+      setInterval(() => {
+        const now = new Date();
+        document.getElementById('live-time').innerHTML = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        document.getElementById('live-date').innerText = now.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
+      }, 1000);
+    }
+
+    // --- 4. TABS & MODALS ---
+    function switchTab(tab) {
+      ['dashboard', 'grocery', 'recipes'].forEach(t => {
+        const el = document.getElementById(`tab-${t}`);
+        const btn = document.getElementById(`nav-btn-${t}`);
+        if (el && btn) {
+          if (t === tab) {
+            el.classList.remove('hidden'); el.classList.add('flex');
+            btn.classList.add('bg-emerald-600', 'text-white', 'shadow-md');
+            btn.classList.remove('bg-white', 'text-warm-text');
+          } else {
+            el.classList.add('hidden'); el.classList.remove('flex');
+            btn.classList.remove('bg-emerald-600', 'text-white', 'shadow-md');
+            btn.classList.add('bg-white', 'text-warm-text');
+          }
+        }
+      });
+    }
+
+    function closeModals() { 
+      // Closes everything EXCEPT the event detail popup which is managed separately
+      document.querySelectorAll('[id^="modal-"]').forEach(m => {
+        if(m.id !== 'modal-event-details') m.classList.add('hidden');
+      }); 
+    }
+
+    // --- 5. SETTINGS MANAGEMENT ---
+    function openSettingsModal() {
+      document.getElementById('set-g-client').value = GOOGLE_CLIENT_ID;
+      document.getElementById('set-g-api').value = GOOGLE_API_KEY;
+      document.getElementById('set-t-api').value = TRELLO_API_KEY;
+      document.getElementById('set-t-token').value = TRELLO_TOKEN;
+      document.getElementById('set-t-list').value = TRELLO_GROCERY_LIST_ID;
+      document.getElementById('set-ai-api').value = GEMINI_API_KEY;
+      document.getElementById('modal-settings').classList.remove('hidden');
+    }
+
+    function saveSettings() {
+      localStorage.setItem('cfg_g_client', document.getElementById('set-g-client').value.trim());
+      localStorage.setItem('cfg_g_api', document.getElementById('set-g-api').value.trim());
+      localStorage.setItem('cfg_t_api', document.getElementById('set-t-api').value.trim());
+      localStorage.setItem('cfg_t_token', document.getElementById('set-t-token').value.trim());
+      localStorage.setItem('cfg_t_list', document.getElementById('set-t-list').value.trim());
+      localStorage.setItem('cfg_ai_api', document.getElementById('set-ai-api').value.trim());
+      window.location.reload(); // Hard reload to securely apply keys to API scripts
+    }
+
+    // --- 6. GOOGLE CALENDAR API (FIXED TIMEZONES) ---
+    let tokenClient;
+    function gapiLoaded() { gapi.load('client', initializeGapiClient); }
+    async function initializeGapiClient() {
+      if (!GOOGLE_API_KEY) return;
+      await gapi.client.init({ apiKey: GOOGLE_API_KEY, discoveryDocs: ['https://www.googleapis.com/discovery/v1/apis/calendar/v3/rest'] });
+    }
+    function gisLoaded() {
+      if (!GOOGLE_CLIENT_ID) return;
+      tokenClient = google.accounts.oauth2.initTokenClient({ client_id: GOOGLE_CLIENT_ID, scope: 'https://www.googleapis.com/auth/calendar.readonly', callback: '' });
+    }
+
+    function handleGoogleAuth() {
+      if (!tokenClient) { alert("Please add your Google Client ID in the Settings (Gear Icon) first."); return; }
+      tokenClient.callback = async (resp) => {
+        if (resp.error !== undefined) throw (resp);
+        document.getElementById('google-dot').className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+        document.getElementById('google-sync-text').innerText = 'Synced';
+        await fetchGoogleCalendarEvents();
+      };
+      tokenClient.requestAccessToken({prompt: 'consent'});
+    }
+
+    async function fetchGoogleCalendarEvents() {
+      try {
+        const timeMin = new Date(); timeMin.setHours(0,0,0,0);
+        const timeMax = new Date(); timeMax.setDate(timeMax.getDate() + 7);
+        const response = await gapi.client.calendar.events.list({
+          'calendarId': 'primary', 'timeMin': timeMin.toISOString(), 'timeMax': timeMax.toISOString(),
+          'showDeleted': false, 'singleEvents': true, 'maxResults': 100, 'orderBy': 'startTime'
+        });
+        
+        events = response.result.items.map(item => {
+          let eventDate;
+          let timeStr = 'All Day';
+          
+          // FIX: Bulletproof Timezone math for Google's weird UTC all-day formats
+          if (item.start.date) {
+            // Split "2026-10-29" and construct a date explicitly at local midnight
+            const parts = item.start.date.split('-');
+            eventDate = new Date(parseInt(parts[0]), parseInt(parts[1]) - 1, parseInt(parts[2])); 
+          } else {
+            eventDate = new Date(item.start.dateTime);
+            timeStr = eventDate.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+          }
+          
+          const dayStr = eventDate.toLocaleDateString('en-US', { weekday: 'long' });
+          return { 
+              id: item.id, 
+              day: DAYS_FULL.includes(dayStr) ? dayStr : todayFullName, 
+              title: item.summary, 
+              time: timeStr, 
+              location: item.location || 'No location' 
+          };
+        });
+        
+        localStorage.setItem('sl_events', JSON.stringify(events));
+        renderTodayEvents();
+      } catch (err) { console.error("Calendar fetch error:", err); }
+    }
+
+    function renderTodayEvents() {
+      const container = document.getElementById('today-events-container');
+      if(!container) return;
+      const todayEvents = events.filter(e => e.day === todayFullName);
+      container.innerHTML = todayEvents.length ? todayEvents.map(e => `
+        <div class="p-3 rounded-xl bg-white border border-warm-border shadow-xs cursor-pointer hover:border-blue-400 transition-all" 
+             onclick="showEventDetails('${e.title.replace(/'/g, "\\'")}', '${e.time}', '${e.location.replace(/'/g, "\\'")}')">
+          <span class="text-xs font-bold text-blue-600 bg-blue-50 px-2 py-1 rounded border border-blue-200">${e.time}</span>
+          <h4 class="text-sm font-bold mt-2 truncate text-warm-text">${e.title}</h4>
+        </div>`).join('') : `<p class="text-xs text-warm-muted p-2">No events scheduled for today.</p>`;
+    }
+    
+    function openCalendarModal() {
+      document.getElementById('full-calendar-grid').innerHTML = DAYS_FULL.map(day => `
+        <div class="p-2 border rounded-xl bg-warm-subtle border-warm-border h-full flex flex-col">
+          <div class="text-xs font-bold text-center py-1 rounded mb-2 text-warm-muted bg-white border border-warm-border shadow-xs">${day}</div>
+          <div class="flex-1 space-y-1">
+          ${events.filter(e => e.day === day).map(e => `
+            <div class="p-1.5 text-[10px] bg-white border border-blue-100 rounded cursor-pointer hover:border-blue-400 hover:shadow-md transition-all overflow-hidden" 
+                 onclick="showEventDetails('${e.title.replace(/'/g, "\\'")}', '${e.time}', '${e.location.replace(/'/g, "\\'")}')">
+              <span class="font-bold block truncate text-blue-600">${e.time}</span>
+              <span class="truncate block text-warm-text font-semibold">${e.title}</span>
+            </div>`).join('')}
+          </div>
+        </div>
+      `).join('');
+      document.getElementById('modal-calendar').classList.remove('hidden');
+    }
+
+    // FIX: Opens popup without closing calendar
+    function showEventDetails(title, time, loc) {
+      document.getElementById('detail-title').innerText = title || 'Untitled';
+      document.getElementById('detail-time').innerText = time || '';
+      document.getElementById('detail-loc').innerText = loc || 'None';
+      document.getElementById('modal-event-details').classList.remove('hidden');
+    }
+    
+    // FIX: Closes only popup
+    function closeEventDetails() {
+      document.getElementById('modal-event-details').classList.add('hidden');
+    }
+
+    // --- 7. CHORES ---
+    function renderChores() {
+      const container = document.getElementById('chores-main-container');
+      if(!container) return; 
+      container.innerHTML = '';
+      
+      if (chores.length === 0) { 
+          container.innerHTML = `<p class="text-xs text-warm-muted p-2">No chores added.</p>`; 
+          return; 
+      }
+
+      chores.forEach(item => {
+        const card = document.createElement('div');
+        card.className = `p-3 rounded-2xl bg-white border border-warm-border flex justify-between items-center ${item.done ? 'opacity-50' : 'shadow-xs'}`;
+        card.innerHTML = `
+          <label class="flex items-center gap-3 flex-1 cursor-pointer">
+            <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleChore('${item.id}')" class="w-5 h-5 rounded text-emerald-600 focus:ring-0">
+            <span class="text-sm font-bold ${item.done ? 'line-through text-warm-muted' : 'text-warm-text'}">${item.text}</span>
+          </label>
+          <div class="flex items-center gap-1.5 shrink-0">
+            ${item.assignees.map(a => `<span class="text-[10px] font-bold px-2 py-1 rounded-lg border ${a==='Ryan'?'bg-blue-50 text-blue-700':'bg-emerald-50 text-emerald-700'}">${a}</span>`).join('')}
+          </div>
+        `;
+        container.appendChild(card);
+      });
+    }
+    
+    function toggleChore(id) { const item = chores.find(c => c.id === id); if (item) { item.done = !item.done; saveState(); } }
+    function resetChores() { chores.forEach(c => c.done = false); saveState(); }
+    function openAddChoreModal() { document.getElementById('modal-add-chore').classList.remove('hidden'); }
+    function saveChore() {
+      const text = document.getElementById('input-chore-title').value.trim();
+      const assignees = [];
+      if(document.getElementById('input-chore-me').checked) assignees.push('Me');
+      if(document.getElementById('input-chore-ryan').checked) assignees.push('Ryan');
+      if(!text) return;
+      chores.push({ id: 'c'+Date.now(), text, assignees, done: false });
+      document.getElementById('input-chore-title').value = '';
+      saveState(); closeModals();
+    }
+
+
+    // --- 8. MEALS & RECIPE VAULT ---
+    function renderTodayMeals() {
+      const container = document.getElementById('today-meal-slots');
+      if(!container || !plannedMeals[todayFullName]) return;
+      container.innerHTML = '';
+      
+      SLOTS.forEach(slot => {
+        const mealData = plannedMeals[todayFullName][slot];
+        const rec = mealData ? recipes.find(r => r.id === mealData.recipeId) : null;
+        container.innerHTML += `
+          <div class="flex items-center justify-between p-3 rounded-xl bg-white border border-amber-200 shadow-sm cursor-pointer hover:border-amber-400 transition-all" 
+               ${rec ? `onclick="openCookMode('${rec.id}')"` : `onclick="openMealPlannerModal()"`}>
+            <div class="flex flex-col">
+              <span class="text-[9px] uppercase font-bold text-amber-600">${slot}</span>
+              <span class="text-sm font-bold text-warm-text">${rec ? rec.title : '<span class="text-warm-muted italic font-normal">Unplanned</span>'}</span>
+            </div>
+            <i data-lucide="${rec ? 'chef-hat' : 'plus'}" class="w-4 h-4 text-amber-500"></i>
+          </div>
+        `;
+      });
+      if(window.lucide) lucide.createIcons();
+    }
+
+    function renderRecipeVault() {
+      const grid = document.getElementById('recipe-vault-grid');
+      if(!grid) return;
+      grid.innerHTML = recipes.map(r => `
+        <div class="warm-card rounded-2xl p-4 flex flex-col cursor-pointer hover:border-amber-400 transition-all" onclick="openCookMode('${r.id}')">
+          <div class="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center mb-3"><i data-lucide="chef-hat" class="w-5 h-5"></i></div>
+          <h3 class="font-bold text-warm-text text-base leading-tight">${r.title}</h3>
+          <p class="text-[10px] text-warm-muted font-bold uppercase mt-2">${(r.ingredients||[]).length} Ingredients</p>
+        </div>
+      `).join('');
+    }
+
+    function openCookMode(recipeId) {
+      const r = recipes.find(x => x.id === recipeId);
+      if(!r) return;
+      document.getElementById('cook-title').innerText = r.title;
+      document.getElementById('cook-ingredients').innerHTML = (r.ingredients||[]).map(i => `<li><b>${i.amount} ${i.unit}</b> ${i.name}</li>`).join('');
+      document.getElementById('cook-instructions').innerHTML = (r.instructions||[]).map(i => `<li>${i}</li>`).join('');
+      document.getElementById('modal-cook-mode').classList.remove('hidden');
+    }
+
+    function saveRecipe() {
+      const title = document.getElementById('input-recipe-title').value.trim();
+      const ingText = document.getElementById('input-recipe-ingredients').value.trim();
+      const instText = document.getElementById('input-recipe-instructions').value.trim();
+      if (!title || !ingText) return;
+      
+      const ingredients = ingText.split('\n').map(line => {
+        const parts = line.trim().split(' ');
+        return { amount: parseFloat(parts[0])||1, unit: parts.length > 1 ? parts[1] : 'pcs', name: parts.slice(2).join(' ')||line };
+      });
+      const instructions = instText.split('\n').filter(Boolean);
+
+      recipes.push({ id: 'r' + Date.now(), title, ingredients, instructions });
+      document.getElementById('input-recipe-title').value = '';
+      document.getElementById('input-recipe-ingredients').value = '';
+      document.getElementById('input-recipe-instructions').value = '';
+      saveState(); closeModals();
+    }
+
+    // --- 9. MEAL PLANNER (DRAG & DROP) ---
+    function openMealPlannerModal() {
+      renderMealPlannerGrid(); renderMealPlannerVault();
+      document.getElementById('modal-meal-planner').classList.remove('hidden');
+    }
+
+    function renderMealPlannerGrid() {
+      document.getElementById('meal-planner-grid').innerHTML = DAYS_FULL.map(day => `
+        <div class="mb-4 bg-white border border-warm-border rounded-2xl p-3 shadow-sm">
+          <h4 class="font-bold text-sm uppercase text-warm-text mb-2">${day}</h4>
+          <div class="grid grid-cols-3 gap-3">
+            ${SLOTS.map(slot => {
+              const mealData = plannedMeals[day] ? plannedMeals[day][slot] : null;
+              const rec = mealData ? recipes.find(r => r.id === mealData.recipeId) : null;
+              return `
+                <div class="border-2 border-dashed border-warm-border rounded-xl p-2 min-h-[70px] flex flex-col justify-center items-center bg-warm-subtle/50 transition-all"
+                     ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDropMeal(event, '${day}', '${slot}')">
+                  <span class="text-[9px] font-bold uppercase text-warm-muted">${slot}</span>
+                  ${rec ? `<div class="draggable-item bg-amber-50 text-amber-900 border border-amber-200 rounded-lg p-1.5 text-xs w-full mt-1 text-center font-semibold shadow-xs" 
+                                draggable="true" ondragstart="onDragMealSlotStart(event, '${day}', '${slot}', '${rec.id}')">${rec.title}</div>` : 
+                           `<span class="text-[10px] italic text-warm-muted/50 mt-1">Drop here</span>`}
+                </div>
+              `;
+            }).join('')}
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function renderMealPlannerVault() {
+      document.getElementById('meal-planner-vault').innerHTML = recipes.map(r => `
+        <div class="draggable-item p-3 rounded-xl bg-white border border-warm-border shadow-sm cursor-grab mb-2 hover:border-amber-300 transition-all" 
+             draggable="true" ondragstart="onDragRecipeStart(event, '${r.id}')">
+          <div class="font-bold text-sm text-warm-text">${r.title}</div>
+        </div>
+      `).join('');
+    }
+
+    function onDragRecipeStart(e, id) { e.dataTransfer.setData('json', JSON.stringify({ action: 'copy', recipeId: id })); }
+    function onDragMealSlotStart(e, day, slot, id) { e.dataTransfer.setData('json', JSON.stringify({ action: 'move', fromDay: day, fromSlot: slot, recipeId: id })); }
+    function onDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over-active'); }
+    function onDragLeave(e) { e.currentTarget.classList.remove('drag-over-active'); }
+    
+    function onDropMeal(e, day, slot) {
+      e.preventDefault(); e.currentTarget.classList.remove('drag-over-active');
+      const payload = JSON.parse(e.dataTransfer.getData('json'));
+      if (payload.action === 'move') plannedMeals[payload.fromDay][payload.fromSlot] = null;
+      if (!plannedMeals[day]) plannedMeals[day] = { breakfast: null, lunch: null, dinner: null }; // Failsafe
+      plannedMeals[day][slot] = { recipeId: payload.recipeId, cook: 'Me' };
+      saveState(); renderMealPlannerGrid();
+    }
+
+    // --- 10. SMART GROCERY LIST & TRELLO SYNC (RESTORED) ---
+    function getCategory(name) {
+      const n = name.toLowerCase();
+      if (n.includes('chicken') || n.includes('beef') || n.includes('pork') || n.includes('tofu') || n.includes('steak')) return 'Meat & Proteins';
+      if (n.includes('onion') || n.includes('garlic') || n.includes('spinach') || n.includes('broccoli')) return 'Produce';
+      if (n.includes('milk') || n.includes('cheese') || n.includes('butter')) return 'Dairy';
+      return 'Pantry / General';
+    }
+
+    function extractGroceries() {
+      let extracted = {};
+      DAYS_FULL.forEach(day => {
+        if (!plannedMeals[day]) return;
+        SLOTS.forEach(slot => {
+          const mealData = plannedMeals[day][slot];
+          if(mealData) {
+            const recipe = recipes.find(r => r.id === mealData.recipeId);
+            if(recipe && recipe.ingredients) {
+              recipe.ingredients.forEach(ing => {
+                if (pantry[ing.name] === true) return; // Skip if in pantry
+                if(!extracted[ing.name]) extracted[ing.name] = { name: ing.name, amounts: [], category: getCategory(ing.name), checked: false };
+                extracted[ing.name].amounts.push(`${ing.amount} ${ing.unit}`);
+              });
+            }
+          }
+        });
+      });
+      generatedGroceries = Object.values(extracted);
+    }
+
+    function renderGroceriesTab() {
+      const pCont = document.getElementById('pantry-staples-container');
+      if(pCont) {
+        pCont.innerHTML = Object.keys(pantry).map(item => `
+          <label class="flex items-center gap-3 p-2 bg-white rounded-xl border border-warm-border cursor-pointer hover:border-emerald-300 transition-all">
+            <input type="checkbox" ${pantry[item] ? 'checked' : ''} onchange="togglePantry('${item}')" class="w-4 h-4 rounded text-emerald-600 focus:ring-0">
+            <span class="text-xs font-bold text-warm-text">${item}</span>
+          </label>
+        `).join('');
+      }
+
+      const gCont = document.getElementById('grocery-categories-container');
+      if(!gCont) return; 
+      gCont.innerHTML = '';
+
+      let cats = {};
+      generatedGroceries.forEach(g => { if(!cats[g.category]) cats[g.category] = []; cats[g.category].push(g); });
+      if(manualGroceries.length > 0) { cats['Manual Additions'] = manualGroceries.map(m => ({ name: m.text, amounts: ['Custom'], manualId: m.id, checked: m.checked })); }
+
+      if(Object.keys(cats).length === 0) {
+        gCont.innerHTML = `<p class="text-sm text-warm-muted col-span-2">Plan meals to automatically generate grocery lists here.</p>`;
+        return;
+      }
+
+      Object.keys(cats).sort().forEach(c => {
+        const itemsHtml = cats[c].map(item => `
+          <div class="flex justify-between items-center py-2 border-b border-warm-subtle last:border-0">
+            <div class="flex items-center gap-3">
+              <input type="checkbox" class="w-4 h-4 rounded text-amber-600 focus:ring-0" ${item.checked ? 'checked' : ''} 
+                     onchange="${item.manualId ? `toggleManualGrocery('${item.manualId}')` : `toggleAutoGrocery('${item.name}')`}">
+              <span class="text-xs font-semibold ${item.checked ? 'line-through text-warm-muted' : 'text-warm-text'}">${item.name}</span>
+            </div>
+            <span class="text-[10px] font-bold text-warm-muted bg-warm-subtle px-1.5 py-0.5 rounded">${item.amounts.join(' + ')}</span>
+          </div>
+        `).join('');
+        gCont.innerHTML += `<div class="bg-white border border-warm-border rounded-2xl p-4 h-max shadow-xs"><h4 class="font-bold text-xs uppercase text-amber-700 mb-2">${c}</h4>${itemsHtml}</div>`;
+      });
+    }
+
+    function togglePantry(item) { pantry[item] = !pantry[item]; saveState(); }
+    function toggleAutoGrocery(name) { const g = generatedGroceries.find(x => x.name === name); if(g) { g.checked = !g.checked; renderGroceriesTab(); } }
+    function addManualGrocery() {
+      const val = document.getElementById('manual-grocery-input').value.trim();
+      if(val) { manualGroceries.push({ id: 'm'+Date.now(), text: val, checked: false }); document.getElementById('manual-grocery-input').value = ''; saveState(); }
+    }
+    function toggleManualGrocery(id) { const it = manualGroceries.find(m => m.id === id); if(it) { it.checked = !it.checked; saveState(); } }
+
+    async function syncToTrello() {
+      const btn = document.getElementById('trello-sync-btn');
+      if (!TRELLO_API_KEY || !TRELLO_TOKEN || !TRELLO_GROCERY_LIST_ID) {
+          alert("Please configure your Trello Keys and List ID in the Settings (Gear Icon) first.");
+          return;
+      }
+      
+      btn.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Syncing...`;
+      if(window.lucide) lucide.createIcons();
+      
+      let itemsToPush = [];
+      generatedGroceries.forEach(g => { if(!g.checked) itemsToPush.push(`${g.name} (${g.amounts.join(' + ')})`); });
+      manualGroceries.forEach(m => { if(!m.checked) itemsToPush.push(m.text); });
+      
+      try {
+        for (const itemName of itemsToPush) {
+          await fetch(`https://api.trello.com/1/cards?idList=${TRELLO_GROCERY_LIST_ID}&key=${TRELLO_API_KEY}&token=${TRELLO_TOKEN}&name=${encodeURIComponent(itemName)}`, { method: 'POST' });
+        }
+        btn.innerHTML = `<i data-lucide="check" class="w-4 h-4"></i> Sent to Trello!`;
+        setTimeout(() => { btn.innerHTML = `<i data-lucide="trello" class="w-4 h-4"></i> Push to Trello`; if(window.lucide) lucide.createIcons(); }, 3000);
+      } catch(err) {
+        alert("Failed to sync to Trello. Please check your List ID and Keys.");
+        btn.innerHTML = `<i data-lucide="trello" class="w-4 h-4"></i> Push to Trello`;
+      }
+      if(window.lucide) lucide.createIcons();
+    }
+
+    // --- 11. GEMINI AI RECIPE IMPORTER (FIXED ENDPOINT & ERROR HANDLING) ---
+    async function importAiRecipe() {
+      if(!GEMINI_API_KEY) {
+          alert("Please add your Gemini API Key in the Settings (Gear Icon) first.");
+          return;
+      }
+      const input = document.getElementById('ai-recipe-url').value;
+      if(!input) {
+          alert("Please paste a URL or recipe text first.");
+          return;
+      }
+      
+      const btn = document.getElementById('ai-btn');
+      btn.innerHTML = 'Thinking...';
+      
+      try {
+        const prompt = `Extract this recipe into strict JSON format: {"title": "Recipe Name", "ingredients": ["1 cup flour", "2 eggs"], "instructions": ["Step 1", "Step 2"]}. ONLY output valid JSON. Recipe: ${input}`;
+        
+        // Note: Using gemini-1.5-flash endpoint.
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
+        });
+        
+        if(res.status === 429) {
+            alert("Google AI Free Tier Limit Reached. Please wait 60 seconds and try again!");
+            btn.innerHTML = 'Import';
+            return;
+        }
+        if(!res.ok) throw new Error("API Error: " + res.status);
+
+        const data = await res.json();
+        let textResult = data.candidates[0].content.parts[0].text;
+        
+        // Clean markdown code blocks from the AI response
+        textResult = textResult.replace(/```json/g, '').replace(/```/g, '').trim();
+        const parsed = JSON.parse(textResult);
+
+        document.getElementById('input-recipe-title').value = parsed.title || "Imported Recipe";
+        document.getElementById('input-recipe-ingredients').value = (parsed.ingredients || []).join('\n');
+        document.getElementById('input-recipe-instructions').value = (parsed.instructions || []).join('\n');
+        
+        document.getElementById('ai-recipe-url').value = ''; 
+        btn.innerHTML = 'Import';
+      } catch(err) {
+        alert("Failed to parse recipe. If it's a URL, make sure the site isn't blocking AI bots. Otherwise, try pasting the recipe text directly.");
+        console.error("AI Error:", err);
+        btn.innerHTML = 'Import';
+      }
+    }
+  </script>
+</body>
+</html>
