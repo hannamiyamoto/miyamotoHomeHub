@@ -343,8 +343,19 @@
           <p id="event-detail-time" class="text-sm font-bold text-blue-600">Time</p>
         </div>
       </div>
-      <div class="bg-warm-subtle rounded-xl p-4 text-sm text-warm-text">
-        <p id="event-detail-desc" class="whitespace-pre-wrap leading-relaxed">No description provided.</p>
+      <div class="bg-warm-subtle rounded-xl p-4 text-sm text-warm-text space-y-3">
+        <div class="flex items-start gap-2">
+          <i data-lucide="map-pin" class="w-4 h-4 mt-0.5 text-warm-muted shrink-0"></i>
+          <span id="event-detail-location" class="leading-relaxed">No location</span>
+        </div>
+        <div class="flex items-start gap-2">
+          <i data-lucide="users" class="w-4 h-4 mt-0.5 text-warm-muted shrink-0"></i>
+          <span id="event-detail-guests" class="leading-relaxed">No guests</span>
+        </div>
+        <div class="flex items-start gap-2">
+          <i data-lucide="align-left" class="w-4 h-4 mt-0.5 text-warm-muted shrink-0"></i>
+          <p id="event-detail-desc" class="whitespace-pre-wrap leading-relaxed flex-1">No description provided.</p>
+        </div>
       </div>
     </div>
   </div>
@@ -552,7 +563,7 @@
         
         const response = await gapi.client.calendar.events.list({
           'calendarId': 'primary', 'timeMin': startOfMonth, 'timeMax': endOfNextMonth,
-          'showDeleted': false, 'singleEvents': true, 'maxResults': 150, 'orderBy': 'startTime'
+          'showDeleted': false, 'singleEvents': true, 'maxResults': 500, 'orderBy': 'startTime'
         });
         const items = response.result.items || [];
         
@@ -562,10 +573,12 @@
           return { 
               id: item.id, 
               day: DAYS_FULL.includes(timeObj.toLocaleDateString('en-US', { weekday: 'long' })) ? timeObj.toLocaleDateString('en-US', { weekday: 'long' }) : todayFullName,
-              dateStr: timeObj.toDateString(), 
+              dateStr: timeObj.toLocaleDateString(), 
               title: item.summary, 
               time: item.start.dateTime ? timeObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'All Day',
-              desc: item.description || 'No description provided.'
+              desc: item.description || 'No description provided.',
+              location: item.location || 'No location specified',
+              guests: item.attendees ? item.attendees.map(a => a.displayName || a.email).join(', ') : 'No guests'
           };
         });
         saveState();
@@ -776,7 +789,7 @@
     function renderTodayEvents() {
       const container = document.getElementById('today-events-container');
       if(!container) return;
-      const todayStr = new Date().toDateString();
+      const todayStr = new Date().toLocaleDateString();
       const todayEvents = events.filter(e => e.dateStr === todayStr);
       
       container.innerHTML = todayEvents.length ? todayEvents.map(e => `
@@ -791,6 +804,8 @@
         if(!e) return;
         document.getElementById('event-detail-title').innerText = e.title;
         document.getElementById('event-detail-time').innerText = e.time;
+        document.getElementById('event-detail-location').innerText = e.location;
+        document.getElementById('event-detail-guests').innerText = e.guests;
         document.getElementById('event-detail-desc').innerText = e.desc;
         document.getElementById('modal-event-details').classList.remove('hidden');
     }
@@ -798,14 +813,14 @@
     function openMonthCalendarModal() {
       const grid = document.getElementById('month-calendar-grid');
       if(grid) {
-          let todayStr = new Date().toDateString();
+          let todayStr = new Date().toLocaleDateString();
           let d = new Date();
           d.setDate(d.getDate() - d.getDay()); // Go back to Sunday
           
           let html = '';
           for (let i = 0; i < 35; i++) {
-              let isToday = d.toDateString() === todayStr;
-              let dayEvents = events.filter(e => e.dateStr === d.toDateString());
+              let isToday = d.toLocaleDateString() === todayStr;
+              let dayEvents = events.filter(e => e.dateStr === d.toLocaleDateString());
               
               html += `
                 <div class="border border-warm-border rounded-xl p-2 bg-white flex flex-col ${isToday ? 'ring-2 ring-blue-500 bg-blue-50/30' : ''}">
@@ -959,8 +974,7 @@
           }
         };
 
-        // FIXED: Using the much more stable gemini-1.5-flash endpoint to prevent Rate Limits
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${secureKeys.geminiApi}`, {
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${secureKeys.geminiApi}`, {
           method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
         });
         const result = await res.json();
