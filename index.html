@@ -19,7 +19,7 @@
 
   <!-- 🟢 IF WE UPDATE IN THE FUTURE, PASTE NEW CODE BELOW THIS LINE -->
 
-  <!-- Tailwind CSS -->
+<!-- Tailwind CSS -->
   <script src="https://cdn.tailwindcss.com"></script>
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -255,6 +255,15 @@
         <h3 class="font-display font-bold text-lg text-warm-text flex items-center gap-2"><i data-lucide="chef-hat" class="w-5 h-5 text-rose-500"></i> Add New Recipe</h3>
         <button onclick="closeModals()" class="text-warm-muted cursor-pointer"><i data-lucide="x" class="w-5 h-5"></i></button>
       </div>
+      
+      <div class="mb-5 p-3 bg-blue-50 border border-blue-200 rounded-xl flex items-center justify-between">
+        <div class="flex flex-col">
+          <span class="text-xs font-bold text-blue-800">Have a recipe URL?</span>
+          <span class="text-[10px] text-blue-600">Auto-import ingredients & steps.</span>
+        </div>
+        <button id="ai-autofill-btn" onclick="aiAutoFillRecipe()" class="px-3 py-2 bg-blue-600 text-white rounded-lg text-xs font-bold hover:bg-blue-700 cursor-pointer transition-all flex items-center gap-1.5 shadow-sm"><i data-lucide="wand-2" class="w-3.5 h-3.5"></i> Auto-Fill (AI)</button>
+      </div>
+
       <div class="space-y-4">
         <div><label class="block text-xs font-bold text-warm-text mb-1">Recipe Title</label><input type="text" id="input-recipe-title" placeholder="e.g. Garlic Butter Steak" class="w-full bg-warm-subtle border border-warm-border rounded-xl px-3 py-2 text-xs"></div>
         <div><label class="block text-xs font-bold text-warm-text mb-1">Ingredients (Format: Amount Unit Name)</label><textarea id="input-recipe-ingredients" rows="4" placeholder="1 lb Steak&#10;2 tbsp Butter" class="w-full bg-warm-subtle border border-warm-border rounded-xl px-3 py-2 text-xs"></textarea></div>
@@ -377,11 +386,20 @@
     function generateEmptyMeals() { let m = {}; DAYS_FULL.forEach(d => m[d] = { breakfast: null, lunch: null, dinner: null }); return m; }
     
     function getValidMeals() {
+      let def = generateEmptyMeals();
       try {
         let m = JSON.parse(localStorage.getItem('sl_meals'));
-        if (m && m['Monday'] && 'breakfast' in m['Monday']) return m;
+        if (m) {
+          DAYS_FULL.forEach(d => {
+            if (m[d]) {
+              SLOTS.forEach(s => {
+                if (m[d][s]) def[d][s] = m[d][s];
+              });
+            }
+          });
+        }
       } catch(e) {}
-      return generateEmptyMeals();
+      return def;
     }
     let plannedMeals = getValidMeals();
 
@@ -471,36 +489,38 @@
         
         const response = await gapi.client.calendar.events.list({
           'calendarId': 'primary', 'timeMin': startOfMonth, 'timeMax': endOfNextMonth,
-          'showDeleted': false, 'singleEvents': true, 'maxResults': 100, 'orderBy': 'startTime'
+          'showDeleted': false, 'singleEvents': true, 'maxResults': 150, 'orderBy': 'startTime'
         });
-        const items = response.result.items;
+        const items = response.result.items || [];
         
-        if (items && items.length > 0) {
-          events = items.map(item => {
-            const start = item.start.dateTime || item.start.date;
-            const timeObj = new Date(start);
-            return { 
-                id: item.id, 
-                day: DAYS_FULL.includes(timeObj.toLocaleDateString('en-US', { weekday: 'long' })) ? timeObj.toLocaleDateString('en-US', { weekday: 'long' }) : todayFullName,
-                dateStr: timeObj.toDateString(), // For exact month matching
-                title: item.summary, 
-                time: item.start.dateTime ? timeObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'All Day',
-                desc: item.description || 'No description provided.'
-            };
-          });
-          saveState();
-          const dot = document.getElementById('google-dot');
-          if(dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
-          const syncText = document.getElementById('google-sync-text');
-          if(syncText) syncText.innerText = 'Synced';
-        }
+        events = items.map(item => {
+          const start = item.start.dateTime || item.start.date;
+          const timeObj = new Date(start);
+          return { 
+              id: item.id, 
+              day: DAYS_FULL.includes(timeObj.toLocaleDateString('en-US', { weekday: 'long' })) ? timeObj.toLocaleDateString('en-US', { weekday: 'long' }) : todayFullName,
+              dateStr: timeObj.toDateString(), 
+              title: item.summary, 
+              time: item.start.dateTime ? timeObj.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'All Day',
+              desc: item.description || 'No description provided.'
+          };
+        });
+        saveState();
+        
+        const dot = document.getElementById('google-dot');
+        if(dot) dot.className = 'w-2 h-2 rounded-full bg-emerald-500 animate-pulse';
+        const syncText = document.getElementById('google-sync-text');
+        if(syncText) syncText.innerText = 'Synced';
+        
       } catch (err) { 
-          console.error(err); 
-          if (err.status === 401) {
+          console.error("GCal Fetch Error: ", err); 
+          if (err.status === 401 || err.status === 403) {
               localStorage.removeItem('sl_gapi_token');
               gapiToken = null;
-              document.getElementById('google-sync-text').innerText = 'Connect GCalendar';
-              document.getElementById('google-dot').className = 'w-2 h-2 rounded-full bg-red-400';
+              const syncText = document.getElementById('google-sync-text');
+              if(syncText) syncText.innerText = 'Connect GCalendar';
+              const dot = document.getElementById('google-dot');
+              if(dot) dot.className = 'w-2 h-2 rounded-full bg-red-400';
           }
       }
     }
@@ -693,7 +713,8 @@
     function renderTodayEvents() {
       const container = document.getElementById('today-events-container');
       if(!container) return;
-      const todayEvents = events.filter(e => e.dateStr === todayDateObj.toDateString());
+      const todayStr = new Date().toDateString();
+      const todayEvents = events.filter(e => e.dateStr === todayStr);
       
       container.innerHTML = todayEvents.length ? todayEvents.map(e => `
         <div onclick="openEventDetails('${e.id}')" class="cursor-pointer p-3 rounded-xl bg-white border border-warm-border hover:border-blue-300 flex items-center gap-3 shadow-xs transition-all">
@@ -714,12 +735,13 @@
     function openMonthCalendarModal() {
       const grid = document.getElementById('month-calendar-grid');
       if(grid) {
-          let d = new Date(todayDateObj);
+          let todayStr = new Date().toDateString();
+          let d = new Date();
           d.setDate(d.getDate() - d.getDay()); // Go back to Sunday
           
           let html = '';
           for (let i = 0; i < 35; i++) {
-              let isToday = d.toDateString() === todayDateObj.toDateString();
+              let isToday = d.toDateString() === todayStr;
               let dayEvents = events.filter(e => e.dateStr === d.toDateString());
               
               html += `
@@ -841,6 +863,64 @@
     }
 
     function openAddRecipeModal() { const el = document.getElementById('modal-add-recipe'); if(el) el.classList.remove('hidden'); }
+    
+    async function aiAutoFillRecipe() {
+      const urlOrText = prompt("Paste a recipe URL or a list of ingredients:");
+      if (!urlOrText) return;
+      
+      let apiKey = localStorage.getItem('sl_gemini_key');
+      if (!apiKey) {
+        apiKey = prompt("Enter your free Gemini API Key to enable AI Auto-Import (it will be saved to this iPad):");
+        if (!apiKey) return;
+        localStorage.setItem('sl_gemini_key', apiKey);
+      }
+
+      const btn = document.getElementById('ai-autofill-btn');
+      const originalHtml = btn.innerHTML;
+      btn.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i> Analyzing...`;
+      btn.disabled = true;
+
+      try {
+        const payload = {
+          contents: [{ parts: [{ text: `Extract the recipe from this source: ${urlOrText}.` }] }],
+          tools: [{ "google_search": {} }],
+          generationConfig: { 
+            responseMimeType: "application/json",
+            responseSchema: {
+              type: "OBJECT",
+              properties: {
+                title: { type: "STRING" },
+                ingredients: { type: "ARRAY", items: { type: "OBJECT", properties: { amount: { type: "NUMBER" }, unit: { type: "STRING" }, name: { type: "STRING" } } } },
+                instructions: { type: "ARRAY", items: { type: "STRING" } }
+              },
+              required: ["title", "ingredients", "instructions"]
+            }
+          }
+        };
+
+        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-3-flash-preview:generateContent?key=${apiKey}`, {
+          method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(payload)
+        });
+        const result = await res.json();
+        
+        if (result.error) throw new Error(result.error.message);
+        
+        const jsonStr = result.candidates[0].content.parts[0].text;
+        const recipe = JSON.parse(jsonStr);
+
+        document.getElementById('input-recipe-title').value = recipe.title || "";
+        document.getElementById('input-recipe-ingredients').value = (recipe.ingredients || []).map(i => `${i.amount || ''} ${i.unit || ''} ${i.name || ''}`.trim()).join('\n');
+        document.getElementById('input-recipe-instructions').value = (recipe.instructions || []).join('\n');
+        
+      } catch (e) {
+        alert("AI Import Failed. Check your URL or Gemini API Key.\n\nError: " + e.message);
+        if (e.message.includes("API key")) localStorage.removeItem('sl_gemini_key');
+      }
+      
+      btn.innerHTML = originalHtml;
+      btn.disabled = false;
+      if(window.lucide) lucide.createIcons();
+    }
 
     function saveRecipe() {
       const title = document.getElementById('input-recipe-title').value.trim();
