@@ -5,25 +5,26 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>Family Command Center</title>
   
-  <!-- Tailwind, Fonts, & Icons -->
+  <!-- Tailwind & Fonts Only (No external Icon scripts to prevent freezing) -->
   <script src="https://cdn.tailwindcss.com"></script>
   <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <script src="https://unpkg.com/lucide@latest"></script>
   
   <script>
     tailwind.config = { theme: { extend: { fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'], display: ['Outfit', 'sans-serif'] }, colors: { warm: { bg: '#FBF9F5', card: '#FFFFFF', subtle: '#F4F0E8', border: '#E5DFD5', text: '#2C2A29', muted: '#78736D' } } } } }
   </script>
   <style>
-    body { background-color: #FBF9F5; color: #2C2A29; user-select: none; -webkit-user-select: none; touch-action: manipulation; }
+    html, body { width: 100%; height: 100%; margin: 0; padding: 0; }
+    body { background-color: #FBF9F5; color: #2C2A29; }
     .warm-card { background: #FFFFFF; border: 1px solid #E5DFD5; box-shadow: 0 4px 20px -2px rgba(44, 42, 41, 0.04); }
     .drag-over-active { background-color: #FEF3C7 !important; border-color: #F59E0B !important; border-style: dashed !important; }
     ::-webkit-scrollbar { width: 6px; height: 6px; }
     ::-webkit-scrollbar-track { background: transparent; }
     ::-webkit-scrollbar-thumb { background: #D8D1C7; border-radius: 9999px; }
     .draggable-item { cursor: grab; } .draggable-item:active { cursor: grabbing; }
+    button { cursor: pointer; }
   </style>
 </head>
-<body class="h-screen w-screen overflow-hidden flex flex-col font-sans antialiased relative">
+<body class="flex flex-col font-sans antialiased bg-warm-bg text-warm-text relative">
 
   <!-- ================= HEADER ================= -->
   <header class="h-20 px-8 flex items-center justify-between shrink-0 bg-white border-b border-warm-border z-10 shadow-xs relative">
@@ -34,7 +35,7 @@
       </div>
       <div class="h-8 w-[1px] bg-warm-border"></div>
       <div class="flex items-center gap-3 shrink-0">
-        <i id="weather-icon" data-lucide="sun" class="w-8 h-8 text-amber-500"></i>
+        <span id="weather-icon" class="text-3xl">☀️</span>
         <div class="flex flex-col">
           <div id="weather-temp" class="text-lg font-bold text-warm-text leading-tight">--°F</div>
           <div class="text-[10px] font-semibold text-warm-muted uppercase tracking-wider">Orange County</div>
@@ -42,10 +43,11 @@
       </div>
     </div>
     <div class="flex items-center gap-4 shrink-0">
-      <button onclick="switchTab('dashboard')" id="nav-btn-dashboard" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-emerald-600 text-white shadow-md flex items-center gap-2"><i data-lucide="layout-dashboard" class="w-4 h-4"></i> Dashboard</button>
-      <button onclick="switchTab('grocery')" id="nav-btn-grocery" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-white border border-warm-border text-warm-text hover:bg-warm-subtle flex items-center gap-2"><i data-lucide="shopping-bag" class="w-4 h-4 text-amber-600"></i> Groceries</button>
-      <button onclick="switchTab('recipes')" id="nav-btn-recipes" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-white border border-warm-border text-warm-text hover:bg-warm-subtle flex items-center gap-2"><i data-lucide="chef-hat" class="w-4 h-4 text-rose-500"></i> Vault</button>
-      <button onclick="openSettingsModal()" class="p-2.5 rounded-xl bg-warm-subtle border border-warm-border text-warm-text hover:bg-warm-border transition-all"><i data-lucide="settings" class="w-4 h-4"></i></button>
+      <button onclick="switchTab('dashboard')" id="nav-btn-dashboard" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-emerald-600 text-white shadow-md flex items-center gap-2">🏠 Dashboard</button>
+      <button onclick="switchTab('grocery')" id="nav-btn-grocery" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-white border border-warm-border text-warm-text hover:bg-warm-subtle flex items-center gap-2">🛒 Groceries</button>
+      <button onclick="switchTab('recipes')" id="nav-btn-recipes" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-white border border-warm-border text-warm-text hover:bg-warm-subtle flex items-center gap-2">📖 Vault</button>
+      <!-- Fixed Gear Button -->
+      <button onclick="openSettingsModal()" class="px-4 py-2.5 rounded-xl bg-warm-subtle border border-warm-border text-warm-text hover:bg-warm-border transition-all text-base shadow-sm">⚙️</button>
     </div>
   </header>
 
@@ -61,13 +63,13 @@
         <div class="h-1/2 flex flex-col warm-card rounded-3xl p-5 overflow-hidden">
           <div class="flex flex-col gap-3 pb-3 border-b border-warm-border shrink-0">
             <div class="flex items-center justify-between">
-              <div class="flex items-center gap-3">
-                <div class="p-2.5 rounded-2xl bg-emerald-100 text-emerald-800 border border-emerald-200"><i data-lucide="check-square" class="w-5 h-5"></i></div>
+              <div class="flex items-center gap-2.5">
+                <div class="text-xl p-1.5 rounded-xl bg-emerald-50 border border-emerald-200">✨</div>
                 <h2 class="font-display font-bold text-base text-warm-text">Household Chores</h2>
               </div>
               <div class="flex gap-2">
-                <button onclick="openAddChoreModal()" class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold border border-emerald-200 flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Add</button>
-                <button onclick="resetChores()" class="px-3 py-1.5 rounded-xl bg-warm-subtle text-warm-muted hover:text-emerald-700 text-[10px] font-bold border flex items-center gap-1.5"><i data-lucide="rotate-ccw" class="w-3 h-3"></i> Reset</button>
+                <button onclick="openAddChoreModal()" class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold border border-emerald-200 flex items-center gap-1.5">➕ Add</button>
+                <button onclick="resetChores()" class="px-3 py-1.5 rounded-xl bg-warm-subtle text-warm-muted hover:text-emerald-700 text-[10px] font-bold border flex items-center gap-1.5">🔄 Reset</button>
               </div>
             </div>
             <div class="flex items-center justify-between pt-1">
@@ -89,12 +91,12 @@
         <div class="h-1/2 flex flex-col warm-card rounded-3xl p-5 overflow-hidden">
           <div class="flex items-center justify-between pb-3 border-b border-warm-border shrink-0">
             <div class="flex items-center gap-2.5">
-              <div class="p-2.5 rounded-2xl bg-purple-50 text-purple-700 border border-purple-200"><i data-lucide="list-todo" class="w-5 h-5"></i></div>
+              <div class="text-xl p-1.5 rounded-xl bg-purple-50 border border-purple-200">📋</div>
               <h2 class="font-display font-bold text-base text-warm-text">One-Off Tasks</h2>
             </div>
             <div class="flex gap-2">
-                <button onclick="openAddTaskModal()" class="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 text-xs font-bold border border-purple-200 flex items-center gap-1.5"><i data-lucide="plus" class="w-3.5 h-3.5"></i> Add</button>
-                <button onclick="syncTasksToTrello()" id="trello-tasks-sync-btn" class="px-3 py-1.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-bold flex items-center gap-1.5"><i data-lucide="trello" class="w-3.5 h-3.5"></i> Sync</button>
+                <button onclick="openAddTaskModal()" class="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 text-xs font-bold border border-purple-200 flex items-center gap-1.5">➕ Add</button>
+                <button onclick="syncTasksToTrello()" id="trello-tasks-sync-btn" class="px-3 py-1.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-bold flex items-center gap-1.5">🔄 Sync</button>
             </div>
           </div>
           <div class="flex-1 overflow-y-auto my-2 space-y-2 pr-1" id="tasks-main-container"></div>
@@ -107,16 +109,16 @@
         <div class="h-1/2 flex flex-col warm-card rounded-3xl p-5 overflow-hidden">
           <div class="flex items-center justify-between pb-3 shrink-0">
             <div class="flex items-center gap-2.5">
-              <div class="p-2.5 rounded-2xl bg-blue-50 text-blue-600 border border-blue-200"><i data-lucide="calendar" class="w-5 h-5"></i></div>
+              <div class="text-xl p-1.5 rounded-xl bg-blue-50 border border-blue-200">📅</div>
               <h3 class="font-display font-bold text-base text-warm-text">Today's Schedule</h3>
             </div>
-            <button onclick="openCalendarEmbedModal()" class="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold border border-blue-200 flex items-center gap-1"><i data-lucide="external-link" class="w-3.5 h-3.5"></i> Month View</button>
+            <button onclick="openCalendarEmbedModal()" class="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold border border-blue-200 flex items-center gap-1">📅 Month View</button>
           </div>
           <div class="flex-1 overflow-hidden mt-1 rounded-xl border border-warm-border relative bg-warm-subtle">
              <iframe id="dashboard-calendar-iframe" class="w-full h-full hidden" frameborder="0" scrolling="no"></iframe>
              <div id="dashboard-calendar-fallback" class="absolute inset-0 flex flex-col items-center justify-center text-warm-muted">
-                 <i data-lucide="calendar-x" class="w-8 h-8 mb-2"></i>
-                 <p class="text-xs font-bold text-center px-4">Calendar not linked yet.<br>Click the gear icon to add your Google link.</p>
+                 <div class="text-3xl mb-2">📅</div>
+                 <p class="text-xs font-bold text-center px-4">Calendar not linked yet.<br>Click the ⚙️ icon to add your Google link.</p>
              </div>
           </div>
         </div>
@@ -125,10 +127,10 @@
         <div class="h-1/2 flex flex-col warm-card rounded-3xl p-5 overflow-hidden">
           <div class="flex items-center justify-between pb-3 border-b border-warm-border shrink-0">
             <div class="flex items-center gap-2.5">
-              <div class="p-2.5 rounded-2xl bg-amber-50 text-amber-700 border border-amber-200"><i data-lucide="utensils" class="w-5 h-5"></i></div>
+              <div class="text-xl p-1.5 rounded-xl bg-amber-50 border border-amber-200">🍽️</div>
               <h3 class="font-display font-bold text-base text-warm-text">Today's Meals</h3>
             </div>
-            <button onclick="openMealPlannerModal()" class="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs font-bold border border-amber-200">Plan Week</button>
+            <button onclick="openMealPlannerModal()" class="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs font-bold border border-amber-200">🍽️ Plan Week</button>
           </div>
           <div class="flex-1 flex flex-col justify-center my-2 gap-2" id="today-meal-slots"></div>
         </div>
@@ -145,9 +147,9 @@
         <div class="flex gap-4">
            <div class="flex gap-2">
              <input type="text" id="manual-grocery-input" placeholder="Add custom item..." class="px-3 py-2 border border-warm-border rounded-xl text-xs bg-warm-subtle w-48">
-             <button onclick="addManualGrocery()" class="px-3 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold">Add</button>
+             <button onclick="addManualGrocery()" class="px-3 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold">➕ Add</button>
            </div>
-           <button onclick="syncGroceriesToTrello()" id="trello-grocery-sync-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-2"><i data-lucide="trello" class="w-4 h-4"></i> Push to Trello</button>
+           <button onclick="syncGroceriesToTrello()" id="trello-grocery-sync-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-2">🔄 Push to Trello</button>
         </div>
       </div>
       <div class="flex-1 overflow-y-auto py-4 flex gap-6">
@@ -156,7 +158,7 @@
             <div class="mt-4"><button onclick="clearDeletedGroceries()" class="text-[10px] font-bold text-warm-muted hover:text-warm-text underline">Restore Hidden Items</button></div>
         </div>
         <div class="w-1/3 bg-warm-subtle border border-warm-border rounded-2xl p-4 h-max">
-          <h3 class="font-bold text-sm text-warm-text mb-1 flex items-center gap-2"><i data-lucide="box" class="w-4 h-4 text-emerald-600"></i> Pantry Staples</h3>
+          <h3 class="font-bold text-sm text-warm-text mb-1 flex items-center gap-2">🥫 Pantry Staples</h3>
           <p class="text-[10px] text-warm-muted mb-4 leading-snug">Checked items skip the grocery list via fuzzy matching.</p>
           <div id="pantry-staples-container" class="space-y-2 max-h-60 overflow-y-auto"></div>
           <div class="mt-4 pt-3 border-t border-warm-border">
@@ -171,7 +173,7 @@
     <div id="tab-recipes" class="h-full hidden flex-col warm-card rounded-3xl p-6 overflow-hidden">
       <div class="flex items-center justify-between pb-5 border-b border-warm-border shrink-0">
         <h2 class="font-display font-bold text-xl text-warm-text">Recipe Vault</h2>
-        <button onclick="openAddRecipeModal()" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold flex items-center gap-2"><i data-lucide="plus" class="w-4 h-4"></i> Add Recipe</button>
+        <button onclick="openAddRecipeModal()" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold flex items-center gap-2">➕ Add Recipe</button>
       </div>
       <div class="flex-1 overflow-y-auto py-4 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4" id="recipe-vault-grid"></div>
     </div>
@@ -183,8 +185,8 @@
   <div id="modal-settings" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden" onclick="if(event.target === this) closeModals()">
     <div class="bg-white border border-warm-border rounded-3xl max-w-md w-full p-6 shadow-xl">
       <div class="flex justify-between items-center mb-4">
-        <h3 class="font-display font-bold text-lg text-warm-text flex items-center gap-2"><i data-lucide="settings" class="w-5 h-5 text-warm-muted"></i> Settings</h3>
-        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500"><i data-lucide="x"></i></button>
+        <h3 class="font-display font-bold text-lg text-warm-text flex items-center gap-2">⚙️ Settings</h3>
+        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500 text-lg">❌</button>
       </div>
       <div class="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
         <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Google Calendar Embed URL</label><input type="text" id="set-g-embed" placeholder="https://calendar.google.com/calendar/embed?src=..." class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
@@ -208,12 +210,12 @@
     <div class="bg-white border border-warm-border rounded-3xl max-w-lg w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto">
       <div class="flex justify-between items-center mb-4">
         <h3 id="recipe-modal-title" class="font-display font-bold text-lg text-warm-text">Add Recipe</h3>
-        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500"><i data-lucide="x"></i></button>
+        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500 text-lg">❌</button>
       </div>
       
       <!-- AI Import Section -->
       <div id="ai-import-box" class="mb-4 p-4 bg-purple-50 border border-purple-200 rounded-xl flex flex-col gap-2">
-          <label class="text-[10px] font-bold uppercase text-purple-700 flex items-center gap-1"><i data-lucide="sparkles" class="w-3 h-3"></i> AI Auto-Import</label>
+          <label class="text-[10px] font-bold uppercase text-purple-700 flex items-center gap-1">✨ AI Auto-Import</label>
           <div class="flex gap-2">
             <textarea id="ai-recipe-input" placeholder="Paste full recipe text here..." rows="2" class="flex-1 bg-white border border-purple-200 rounded-lg px-3 py-2 text-xs resize-none"></textarea>
             <button onclick="importAiRecipe()" id="ai-btn" class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold transition-all self-center">Import</button>
@@ -229,7 +231,7 @@
         <div><label class="block text-xs font-bold text-warm-text mb-1">Instructions</label><textarea id="input-recipe-instructions" rows="4" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs"></textarea></div>
       </div>
       <div class="flex justify-between items-center mt-6">
-        <button onclick="deleteCurrentRecipe()" id="btn-delete-recipe" class="px-4 py-2 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold hidden hover:bg-rose-100">Delete</button>
+        <button onclick="deleteCurrentRecipe()" id="btn-delete-recipe" class="px-4 py-2 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold hidden hover:bg-rose-100">🗑️ Delete</button>
         <div class="flex gap-2 ml-auto">
             <button onclick="closeModals()" class="px-4 py-2 bg-warm-subtle rounded-xl text-xs font-bold text-warm-text">Cancel</button>
             <button onclick="saveRecipe()" class="px-4 py-2 bg-rose-500 text-white rounded-xl text-xs font-bold">Save Recipe</button>
@@ -243,7 +245,7 @@
     <div class="bg-white border border-warm-border rounded-3xl max-w-sm w-full p-6 shadow-xl">
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-display font-bold text-lg text-warm-text">Add Chore</h3>
-        <button onclick="closeModals()" class="text-warm-muted"><i data-lucide="x"></i></button>
+        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500 text-lg">❌</button>
       </div>
       <div class="space-y-4">
         <div><label class="block text-xs font-bold mb-1">Chore Name</label><input type="text" id="input-chore-title" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs"></div>
@@ -262,8 +264,8 @@
         <div>
           <label class="block text-xs font-bold mb-2">Assignees</label>
           <div class="flex gap-4">
-            <label class="flex items-center gap-2 text-xs"><input type="checkbox" id="input-chore-hanna" value="Hanna" class="rounded text-emerald-600" checked> Hanna</label>
-            <label class="flex items-center gap-2 text-xs"><input type="checkbox" id="input-chore-ryan" value="Ryan" class="rounded text-emerald-600" checked> Ryan</label>
+            <label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" id="input-chore-hanna" value="Hanna" class="rounded text-emerald-600 cursor-pointer" checked> Hanna</label>
+            <label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" id="input-chore-ryan" value="Ryan" class="rounded text-emerald-600 cursor-pointer" checked> Ryan</label>
           </div>
         </div>
       </div>
@@ -279,7 +281,7 @@
     <div class="bg-white border border-warm-border rounded-3xl max-w-sm w-full p-6 shadow-xl">
       <div class="flex justify-between items-center mb-4">
         <h3 class="font-display font-bold text-lg text-warm-text">Add Task</h3>
-        <button onclick="closeModals()" class="text-warm-muted"><i data-lucide="x"></i></button>
+        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500 text-lg">❌</button>
       </div>
       <div class="space-y-4">
         <div><label class="block text-xs font-bold mb-1">Task Description</label><input type="text" id="input-task-title" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs"></div>
@@ -301,8 +303,8 @@
   <div id="modal-calendar-embed" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-6 z-40 hidden" onclick="if(event.target === this) closeModals()">
     <div class="bg-white border border-warm-border rounded-3xl w-full max-w-6xl h-[85vh] p-6 flex flex-col shadow-2xl relative">
       <div class="flex justify-between items-center pb-4 border-b shrink-0">
-        <h3 class="font-display font-bold text-xl flex items-center gap-2"><i data-lucide="calendar" class="text-blue-600"></i> Google Calendar</h3>
-        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500 bg-warm-subtle p-2 rounded-xl"><i data-lucide="x"></i></button>
+        <h3 class="font-display font-bold text-xl flex items-center gap-2">📅 Google Calendar</h3>
+        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500 bg-warm-subtle p-2 rounded-xl text-lg">❌</button>
       </div>
       <div class="flex-1 mt-4 rounded-xl overflow-hidden border border-warm-border relative bg-warm-bg">
           <iframe id="google-calendar-modal-iframe" style="border: 0" width="100%" height="100%" frameborder="0" scrolling="yes"></iframe>
@@ -315,10 +317,10 @@
     <div class="bg-white border border-warm-border rounded-3xl max-w-5xl w-full h-[85vh] p-6 flex flex-col shadow-2xl">
       <div class="flex justify-between items-center pb-4 border-b shrink-0">
         <div class="flex items-center gap-3">
-            <div class="p-2 bg-amber-50 rounded-xl text-amber-700"><i data-lucide="utensils" class="w-5 h-5"></i></div>
+            <div class="p-2 bg-amber-50 rounded-xl text-amber-700 text-lg">🍽️</div>
             <div><h3 class="font-display font-bold text-xl">Meal Planner</h3></div>
         </div>
-        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500"><i data-lucide="x"></i></button>
+        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500 text-lg">❌</button>
       </div>
       <div class="flex-1 grid grid-cols-12 gap-4 mt-4 min-h-0">
         <div class="col-span-9 overflow-y-auto pr-2" id="meal-planner-grid"></div>
@@ -331,11 +333,11 @@
   <div id="modal-cook-mode" class="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center p-8 z-50 hidden" onclick="if(event.target === this) closeModals()">
     <div class="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8 relative shadow-2xl">
       <div class="absolute top-6 right-6 flex gap-3">
-          <button id="cook-edit-btn" class="p-2 bg-warm-subtle rounded-xl text-warm-muted hover:text-blue-600"><i data-lucide="pencil"></i></button>
-          <button onclick="closeModals()" class="p-2 bg-warm-subtle rounded-xl text-warm-muted hover:text-rose-500"><i data-lucide="x"></i></button>
+          <button id="cook-edit-btn" class="p-2 bg-warm-subtle rounded-xl text-warm-muted hover:text-blue-600 text-lg">✏️</button>
+          <button onclick="closeModals()" class="p-2 bg-warm-subtle rounded-xl text-warm-muted hover:text-rose-500 text-lg">❌</button>
       </div>
       <h2 id="cook-title" class="font-display font-bold text-3xl text-warm-text mb-2">Recipe</h2>
-      <a id="cook-link" href="#" target="_blank" class="text-xs text-blue-600 hover:underline mb-6 flex items-center gap-1 hidden"><i data-lucide="link" class="w-3 h-3"></i> View Original Recipe</a>
+      <a id="cook-link" href="#" target="_blank" class="text-xs text-blue-600 hover:underline mb-6 flex items-center gap-1 hidden">🔗 View Original Recipe</a>
       <div class="grid grid-cols-3 gap-8 mt-6">
         <div class="col-span-1 border-r border-warm-border pr-4">
           <h4 class="font-bold text-sm text-warm-text mb-3 uppercase tracking-wider text-rose-600">Ingredients</h4>
@@ -351,7 +353,6 @@
 
   <!-- ================= JAVASCRIPT ================= -->
   <script>
-    // --- 1. CONFIG & GLOBALS ---
     const GOOGLE_CALENDAR_EMBED = localStorage.getItem('cfg_g_embed') || '';
     const TRELLO_API_KEY = localStorage.getItem('cfg_t_api') || '';
     const TRELLO_TOKEN = localStorage.getItem('cfg_t_token') || '';
@@ -387,7 +388,6 @@
     let activeChoreFilter = 'ALL';
     let activeChoreFrequency = 'daily';
 
-    // --- BOOTSTRAP ---
     window.onload = function() {
       try {
           startClock();
@@ -418,7 +418,6 @@
       renderTodayMeals();
       renderRecipeVault();
       renderGroceriesTab();
-      lucide.createIcons();
     }
 
     function startClock() {
@@ -435,9 +434,7 @@
         const data = await res.json();
         const tempF = Math.round((data.current_weather.temperature * 9/5) + 32);
         document.getElementById('weather-temp').innerText = `${tempF}°F`;
-      } catch (e) { 
-        document.getElementById('weather-temp').innerText = '72°F'; 
-      }
+      } catch (e) { document.getElementById('weather-temp').innerText = '72°F'; }
     }
 
     function switchTab(tab) {
@@ -451,7 +448,6 @@
       });
     }
 
-    // Modal click-to-close logic (Simplified and Bulletproof)
     function closeModals() { 
         document.querySelectorAll('[id^="modal-"]').forEach(m => m.classList.add('hidden')); 
     }
@@ -476,7 +472,6 @@
       window.location.reload();
     }
 
-    // --- NATIVE GOOGLE CALENDAR EMBEDS ---
     function setupCalendars() {
         const dashboardFrame = document.getElementById('dashboard-calendar-iframe');
         const dashboardFallback = document.getElementById('dashboard-calendar-fallback');
@@ -488,12 +483,9 @@
                 const match = srcLink.match(/src="([^"]+)"/);
                 if (match) srcLink = match[1];
             }
-            // Dashboard gets AGENDA mode
             dashboardFrame.src = srcLink + "&mode=AGENDA&showTitle=0&showNav=0&showDate=0&showPrint=0&showTabs=0&showCalendars=0";
             dashboardFrame.classList.remove('hidden');
             dashboardFallback.classList.add('hidden');
-            
-            // Modal gets full MONTH view
             modalFrame.src = srcLink;
         } else {
             dashboardFrame.classList.add('hidden');
@@ -509,7 +501,6 @@
       document.getElementById('modal-calendar-embed').classList.remove('hidden');
     }
 
-    // --- CHORES & TASKS ---
     function setChoreFrequency(freq) { activeChoreFrequency = freq; renderChores(); }
     function setChoreFilter(filter) { activeChoreFilter = filter; renderChores(); }
 
@@ -538,7 +529,7 @@
         card.className = `p-3 rounded-2xl bg-white border border-warm-border flex justify-between items-center ${item.done ? 'opacity-50' : 'shadow-xs'}`;
         card.innerHTML = `
           <label class="flex items-center gap-3 flex-1 cursor-pointer">
-            <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleChore('${item.id}')" class="w-5 h-5 rounded text-emerald-600 focus:ring-0">
+            <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleChore('${item.id}')" class="w-5 h-5 rounded text-emerald-600 focus:ring-0 cursor-pointer">
             <span class="text-sm font-bold ${item.done ? 'line-through text-warm-muted' : 'text-warm-text'}">${item.text}</span>
           </label>
           <div class="flex items-center gap-1.5 shrink-0">
@@ -576,15 +567,14 @@
         card.className = `p-3 rounded-2xl bg-white border border-warm-border flex justify-between items-center ${item.done ? 'opacity-50' : 'shadow-xs'}`;
         card.innerHTML = `
           <label class="flex items-center gap-3 flex-1 cursor-pointer">
-            <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleTask('${item.id}')" class="w-5 h-5 rounded text-purple-600 focus:ring-0">
+            <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleTask('${item.id}')" class="w-5 h-5 rounded text-purple-600 focus:ring-0 cursor-pointer">
             <span class="text-sm font-bold ${item.done ? 'line-through text-warm-muted' : 'text-warm-text'}">${item.text}</span>
           </label>
           ${item.assignee && item.assignee !== 'Unassigned' ? `<span class="text-[10px] font-bold px-2 py-1 rounded-lg border bg-purple-50 text-purple-700">${item.assignee}</span>` : ''}
-          <button onclick="deleteTask('${item.id}')" class="ml-2 text-warm-muted hover:text-rose-500"><i data-lucide="trash-2" class="w-4 h-4"></i></button>
+          <button onclick="deleteTask('${item.id}')" class="ml-2 text-warm-muted hover:text-rose-500">🗑️</button>
         `;
         container.appendChild(card);
       });
-      if (window.lucide) lucide.createIcons();
     }
 
     function toggleTask(id) { const t = tasks.find(x => x.id === id); if(t) { t.done = !t.done; saveState(); } }
@@ -604,21 +594,20 @@
     async function syncTasksToTrello() {
       const btn = document.getElementById('trello-tasks-sync-btn');
       if (!TRELLO_API_KEY || !TRELLO_TOKEN || !TRELLO_TASKS_LIST_ID) return alert("Configure Trello Task List ID in Settings first.");
-      btn.innerHTML = `<i data-lucide="loader" class="w-3.5 h-3.5 animate-spin"></i>`;
+      btn.innerHTML = `🔄 Working...`;
       const uncompleted = tasks.filter(t => !t.done);
       try {
         for (const t of uncompleted) {
           const cardName = t.assignee && t.assignee !== 'Unassigned' ? `[${t.assignee}] ${t.text}` : t.text;
           await fetch(`https://api.trello.com/1/cards?idList=${TRELLO_TASKS_LIST_ID}&key=${TRELLO_API_KEY}&token=${TRELLO_TOKEN}&name=${encodeURIComponent(cardName)}`, { method: 'POST' });
         }
-        btn.innerHTML = `<i data-lucide="check" class="w-3.5 h-3.5"></i>`;
-        setTimeout(() => { btn.innerHTML = `<i data-lucide="trello" class="w-3.5 h-3.5"></i> Sync`; lucide.createIcons(); }, 2000);
+        btn.innerHTML = `✅ Done!`;
+        setTimeout(() => { btn.innerHTML = `🔄 Sync`; }, 2000);
       } catch(err) {
-        alert("Failed to sync Tasks."); btn.innerHTML = `<i data-lucide="trello" class="w-3.5 h-3.5"></i> Sync`;
+        alert("Failed to sync Tasks."); btn.innerHTML = `🔄 Sync`;
       }
     }
 
-    // --- MEALS & PLANNER ---
     function renderTodayMeals() {
       const container = document.getElementById('today-meal-slots');
       if(!container) return; container.innerHTML = '';
@@ -629,7 +618,7 @@
           <div class="flex items-center justify-between p-3 rounded-xl bg-white border border-amber-200 shadow-sm cursor-pointer hover:border-amber-400" 
                ${rec ? `onclick="openCookMode('${rec.id}')"` : `onclick="openMealPlannerModal()"`}>
             <div class="flex flex-col"><span class="text-[9px] uppercase font-bold text-amber-600">${slot}</span><span class="text-sm font-bold text-warm-text">${rec ? rec.title : '<span class="text-warm-muted italic font-normal">Unplanned</span>'}</span></div>
-            <i data-lucide="${rec ? 'chef-hat' : 'plus'}" class="w-4 h-4 text-amber-500"></i>
+            <span class="text-amber-500">${rec ? '🍽️' : '➕'}</span>
           </div>
         `;
       });
@@ -661,10 +650,9 @@
       document.getElementById('meal-planner-vault').innerHTML = recipes.map(r => `
         <div class="draggable-item p-3 rounded-xl bg-white border border-warm-border shadow-sm cursor-grab flex justify-between items-center group hover:border-amber-300" draggable="true" ondragstart="onDragRecipeStart(event, '${r.id}')">
             <div class="font-bold text-sm text-warm-text truncate">${r.title}</div>
-            <button onclick="openCookMode('${r.id}')" class="text-warm-muted hover:text-blue-600 p-1"><i data-lucide="eye" class="w-4 h-4"></i></button>
+            <button onclick="openCookMode('${r.id}')" class="text-warm-muted hover:text-blue-600 p-1">👁️</button>
         </div>
       `).join('');
-      if (window.lucide) lucide.createIcons();
     }
 
     function onDragRecipeStart(e, id) { e.dataTransfer.setData('json', JSON.stringify({ action: 'copy', recipeId: id })); }
@@ -680,7 +668,6 @@
       saveState(); renderMealPlannerGrid();
     }
 
-    // --- GROCERIES (FUZZY PANTRY + DELETION) ---
     function isItemInPantry(itemName) {
         const query = itemName.toLowerCase();
         for (const p of Object.keys(pantry)) {
@@ -726,7 +713,7 @@
 
     function renderGroceriesTab() {
       const pCont = document.getElementById('pantry-staples-container');
-      if(pCont) pCont.innerHTML = Object.keys(pantry).map(item => `<label class="flex items-center gap-3 p-2 bg-white rounded-xl border border-warm-border cursor-pointer hover:border-emerald-300"><input type="checkbox" ${pantry[item] ? 'checked' : ''} onchange="togglePantry('${item}')" class="w-4 h-4 rounded text-emerald-600 focus:ring-0"><span class="text-xs font-bold text-warm-text">${item}</span></label>`).join('');
+      if(pCont) pCont.innerHTML = Object.keys(pantry).map(item => `<label class="flex items-center gap-3 p-2 bg-white rounded-xl border border-warm-border cursor-pointer hover:border-emerald-300"><input type="checkbox" ${pantry[item] ? 'checked' : ''} onchange="togglePantry('${item}')" class="w-4 h-4 rounded text-emerald-600 focus:ring-0 cursor-pointer"><span class="text-xs font-bold text-warm-text">${item}</span></label>`).join('');
 
       const sCont = document.getElementById('pantry-skipped-list');
       if(sCont) sCont.innerHTML = pantrySkipped.length > 0 ? pantrySkipped.map(s => `<li class="line-through">${s}</li>`).join('') : `<li>No items skipped yet.</li>`;
@@ -744,18 +731,17 @@
         const itemsHtml = cats[c].map(item => `
           <div class="flex justify-between items-center py-2 border-b border-warm-subtle last:border-0 group">
             <div class="flex items-center gap-3 flex-1 pr-2">
-              <input type="checkbox" class="w-4 h-4 rounded text-amber-600" ${item.checked ? 'checked' : ''} onchange="${item.manualId ? `toggleManualGrocery('${item.manualId}')` : `toggleAutoGrocery('${item.name.replace(/'/g, "\\'")}')`}">
+              <input type="checkbox" class="w-4 h-4 rounded text-amber-600 cursor-pointer" ${item.checked ? 'checked' : ''} onchange="${item.manualId ? `toggleManualGrocery('${item.manualId}')` : `toggleAutoGrocery('${item.name.replace(/'/g, "\\'")}')`}">
               <span class="text-xs font-semibold ${item.checked ? 'line-through text-warm-muted' : 'text-warm-text'}">${item.name}</span>
             </div>
             ${item.manualId ? 
-                `<button onclick="deleteManualGrocery('${item.manualId}')" class="text-warm-muted hover:text-rose-500 opacity-0 group-hover:opacity-100"><i data-lucide="trash-2" class="w-3.5 h-3.5"></i></button>` : 
-                `<button onclick="hideAutoGrocery('${item.name.replace(/'/g, "\\'")}')" class="text-warm-muted hover:text-rose-500 opacity-0 group-hover:opacity-100" title="Hide this item"><i data-lucide="eye-off" class="w-3.5 h-3.5"></i></button>`
+                `<button onclick="deleteManualGrocery('${item.manualId}')" class="text-warm-muted hover:text-rose-500 opacity-0 group-hover:opacity-100">🗑️</button>` : 
+                `<button onclick="hideAutoGrocery('${item.name.replace(/'/g, "\\'")}')" class="text-warm-muted hover:text-rose-500 opacity-0 group-hover:opacity-100" title="Hide this item">🚫</button>`
             }
           </div>
         `).join('');
         gCont.innerHTML += `<div class="bg-white border rounded-2xl p-4 h-max shadow-xs"><h4 class="font-bold text-xs uppercase text-amber-700 mb-2">${c}</h4>${itemsHtml}</div>`;
       });
-      if (window.lucide) lucide.createIcons();
     }
 
     function togglePantry(item) { pantry[item] = !pantry[item]; saveState(); }
@@ -770,7 +756,7 @@
     async function syncGroceriesToTrello() {
       const btn = document.getElementById('trello-grocery-sync-btn');
       if (!TRELLO_API_KEY || !TRELLO_TOKEN || !TRELLO_GROCERY_LIST_ID) return alert("Configure Trello Grocery List ID in Settings first.");
-      btn.innerHTML = `<i data-lucide="loader" class="w-4 h-4 animate-spin"></i>`;
+      btn.innerHTML = `🔄 Working...`;
       
       let itemsToPush = [];
       generatedGroceries.forEach(g => { if(!g.checked) itemsToPush.push(`[${g.category}] ${g.name}`); });
@@ -780,28 +766,26 @@
         for (const itemName of itemsToPush) {
           await fetch(`https://api.trello.com/1/cards?idList=${TRELLO_GROCERY_LIST_ID}&key=${TRELLO_API_KEY}&token=${TRELLO_TOKEN}&name=${encodeURIComponent(itemName)}`, { method: 'POST' });
         }
-        btn.innerHTML = `<i data-lucide="check" class="w-4 h-4"></i>`;
-        setTimeout(() => { btn.innerHTML = `<i data-lucide="trello" class="w-4 h-4"></i> Push to Trello`; lucide.createIcons(); }, 2000);
+        btn.innerHTML = `✅ Done!`;
+        setTimeout(() => { btn.innerHTML = `🔄 Push to Trello`; }, 2000);
       } catch(err) {
         alert("Failed to sync Groceries.");
-        btn.innerHTML = `<i data-lucide="trello" class="w-4 h-4"></i> Push to Trello`;
+        btn.innerHTML = `🔄 Push to Trello`;
       }
     }
 
-    // --- RECIPE VAULT & AI (WITH EDIT/DELETE) ---
     function renderRecipeVault() {
       const grid = document.getElementById('recipe-vault-grid');
       if(!grid) return;
       grid.innerHTML = recipes.map(r => `
         <div class="warm-card rounded-2xl p-4 flex flex-col cursor-pointer hover:border-amber-400 group" onclick="openCookMode('${r.id}')">
           <div class="flex justify-between items-start mb-3">
-              <div class="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center"><i data-lucide="chef-hat" class="w-5 h-5"></i></div>
-              <button onclick="event.stopPropagation(); openEditRecipeModal('${r.id}')" class="text-warm-muted hover:text-blue-600 opacity-0 group-hover:opacity-100 p-1"><i data-lucide="pencil" class="w-4 h-4"></i></button>
+              <div class="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center text-lg">🍽️</div>
+              <button onclick="event.stopPropagation(); openEditRecipeModal('${r.id}')" class="text-warm-muted hover:text-blue-600 opacity-0 group-hover:opacity-100 p-1">✏️</button>
           </div>
           <h3 class="font-bold text-warm-text text-base leading-tight">${r.title}</h3>
         </div>
       `).join('');
-      if (window.lucide) lucide.createIcons();
     }
 
     function openCookMode(recipeId) {
@@ -886,7 +870,6 @@
         }
     }
 
-    // New Highly-Forgiving AI Parser
     async function importAiRecipe() {
       if(!GEMINI_API_KEY) return alert("Add Gemini API Key in Settings first.");
       const input = document.getElementById('ai-recipe-input').value;
@@ -916,7 +899,6 @@
         const data = await res.json();
         const textResult = data.candidates[0].content.parts[0].text;
         
-        // Forgiving regex to find JSON block even if Gemini talks
         const jsonMatch = textResult.match(/\{[\s\S]*\}/);
         if(!jsonMatch) throw new Error("Could not find recipe data in AI response.");
         
