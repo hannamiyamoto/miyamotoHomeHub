@@ -18,6 +18,7 @@ html,body{width:100%;height:100%;margin:0;background:#FBF9F5;color:#2C2A29}
 .drag-over-active{background:#FEF3C7!important;border-color:#F59E0B!important}
 ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:#D8D1C7;border-radius:9999px}
 button{cursor:pointer}.drag{cursor:grab}
+.gf{transition:transform 1.2s cubic-bezier(.3,1.2,.4,1)}.gb.hop{animation:hop .7s}@keyframes hop{0%,100%{transform:translateY(0)}35%{transform:translateY(-9px)}65%{transform:translateY(-3px)}}
 .grip{touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
 </style>
 </head>
@@ -35,6 +36,7 @@ button{cursor:pointer}.drag{cursor:grab}
       <div><div id="temp" class="text-lg font-bold leading-tight">--°F</div><div class="text-[10px] font-semibold text-warm-muted uppercase tracking-wider">Orange County</div></div>
     </div>
   </div>
+  <button id="golf" onclick="openScore()" class="flex-1 mx-6 max-w-md h-16 rounded-2xl hover:opacity-90" aria-label="Open scoreboard"></button>
   <nav class="flex items-center gap-3">
     <button data-tab="dashboard" onclick="tab('dashboard')"><i data-i="home"></i> Dashboard</button>
     <button data-tab="grocery" onclick="tab('grocery')"><i data-i="cart"></i> Groceries</button>
@@ -168,6 +170,7 @@ let recipes=load('sl_recipes',[]),chores=load('sl_chores',[]),tasks=load('sl_tas
 skipG=load('sl_del_groceries',[]),checked=load('sl_checked',[]),pushed=load('sl_pushed',[]),meta=load('sl_meta',{}),
 pantry=load('sl_pantry',{'Soy Sauce':true,'White Rice':true,'Olive Oil':true,'Salt':true,'Pepper':true,'Sugar':true,'Flour':true});
 let meals=load('sl_meals',null);
+let log=load('sl_log',[]),rewards=load('sl_rewards',{});
 if(!meals||!meals.Monday){meals={};DAYS.forEach(d=>meals[d]={breakfast:null,lunch:null,dinner:null})}
 let groceries=[],skipped=[],chFreq='daily',chWho='ALL',picked=null;
 
@@ -207,16 +210,18 @@ const str=v=>typeof v==='string'?v:(obj(v)?String(v.name||v.text||v.item||''):St
 const sid=(v,p,i)=>String(v||p+Date.now()+i).replace(/[^\w-]/g,'');
 function clean(){
   recipes=arr(recipes).filter(obj).map((r,i)=>({id:sid(r.id,'r',i),title:str(r.title)||'Untitled',link:safeUrl(r.link),ingredients:arr(r.ingredients).map(str).filter(Boolean),instructions:arr(r.instructions).map(str).filter(Boolean)}));
-  chores=arr(chores).filter(obj).map((c,i)=>({id:sid(c.id,'c',i),text:str(c.text||c.title),assignees:arr(c.assignees).map(str),frequency:c.frequency==='weekly'?'weekly':'daily',days:arr(c.days).map(str),done:!!c.done}));
+  chores=arr(chores).filter(obj).map((c,i)=>({id:sid(c.id,'c',i),text:str(c.text||c.title),assignees:arr(c.assignees).map(str),frequency:c.frequency==='weekly'?'weekly':'daily',days:arr(c.days).map(str),points:Math.max(1,Math.min(10,+c.points||1)),done:!!c.done}));
   tasks=arr(tasks).filter(obj).map((t,i)=>({id:sid(t.id,'t',i),text:str(t.text),assignee:str(t.assignee)||'Unassigned',done:!!t.done,synced:!!t.synced}));
   manual=arr(manual).filter(obj).map((m,i)=>({id:sid(m.id,'m',i),text:str(m.text),checked:!!m.checked}));
   skipG=arr(skipG).map(str);checked=arr(checked).map(str);pushed=arr(pushed).map(str);
+  log=arr(log).filter(obj).map(l=>({id:sid(l.id,'l',0),cid:str(l.cid),text:str(l.text),who:WHO.includes(l.who)?l.who:'',pts:Math.max(0,+l.pts||0),date:str(l.date),week:str(l.week),ts:+l.ts||0})).slice(-1500);
+  if(!obj(rewards))rewards={};rewards.bal=obj(rewards.bal)?rewards.bal:{};rewards.hist=arr(rewards.hist).filter(obj).slice(0,26);rewards.spent=arr(rewards.spent).filter(obj).slice(0,50);rewards.prize=Math.max(1,Math.min(999,+rewards.prize||10));
   if(!obj(pantry))pantry={};if(!obj(meta))meta={};if(!obj(meals))meals={};
   DAYS.forEach(d=>{if(!obj(meals[d]))meals[d]={};SLOTS.forEach(s=>{const m=meals[d][s];meals[d][s]=obj(m)&&m.recipeId?{recipeId:sid(m.recipeId,'r',0)}:null})});
 }
 
 function save(){
-  const d={sl_recipes:recipes,sl_chores:chores,sl_tasks:tasks,sl_meals:meals,sl_pantry:pantry,sl_manual_groceries:manual,sl_del_groceries:skipG,sl_checked:checked,sl_pushed:pushed,sl_meta:meta};
+  const d={sl_recipes:recipes,sl_chores:chores,sl_tasks:tasks,sl_meals:meals,sl_pantry:pantry,sl_manual_groceries:manual,sl_del_groceries:skipG,sl_checked:checked,sl_pushed:pushed,sl_meta:meta,sl_log:log,sl_rewards:rewards};
   try{for(const k in d)localStorage.setItem(k,JSON.stringify(d[k]))}catch(e){alert('Storage is full or blocked; changes may not be saved.')}
   safe('grocery list',extract);renderAll();
 }
@@ -228,12 +233,12 @@ const weekKey=d=>{const m=new Date(d);m.setDate(m.getDate()-(m.getDay()+6)%7);re
 function autoReset(){
   const n=new Date(),dk=dayKey(n),wk=weekKey(n);let ch=false;
   if(meta.day!==dk){chores.forEach(c=>{if(c.frequency==='daily')c.done=false});meta.day=dk;ch=true}
-  if(meta.week!==wk){chores.forEach(c=>{if(c.frequency==='weekly')c.done=false});meta.week=wk;ch=true}
+  if(meta.week!==wk){if(meta.week)closeWeek(meta.week);chores.forEach(c=>{if(c.frequency==='weekly')c.done=false});meta.week=wk;ch=true}
   return ch;
 }
 
 /* ---------- shell ---------- */
-function renderAll(){[['chores',renderChores],['tasks',renderTasks],['meals',renderToday],['recipes',renderVault],['groceries',renderGroceries]].forEach(([w,f])=>safe(w,f));hydrate()}
+function renderAll(){[['chores',renderChores],['tasks',renderTasks],['meals',renderToday],['recipes',renderVault],['groceries',renderGroceries],['golf',renderGolf]].forEach(([w,f])=>safe(w,f));hydrate()}
 const BASE='px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ';
 function tab(t){
   ['dashboard','grocery','recipes'].forEach(x=>{const e=$('t-'+x);e.classList.toggle('hidden',x!==t);e.classList.toggle('flex',x===t)});
@@ -302,28 +307,34 @@ function renderChores(){
   document.querySelectorAll('[data-freq]').forEach(b=>b.className=SEG+(b.dataset.freq===chFreq?'bg-white shadow-sm':'text-warm-muted'));
   document.querySelectorAll('[data-who]').forEach(b=>b.className='px-3 py-1 rounded-xl text-xs font-bold '+(b.dataset.who===chWho?'bg-emerald-600 text-white':'border border-warm-border bg-white text-warm-muted'));
   const today=dayName();
-  let l=chores.filter(c=>chFreq==='daily'?(c.frequency==='daily'||c.days.includes(today)):c.frequency==='weekly');
+  let l=chores.filter(c=>chFreq==='daily'?(c.frequency==='daily'||c.days.includes(today)||(c.frequency==='weekly'&&!c.days.length)):c.frequency==='weekly');
   if(chWho!=='ALL')l=l.filter(c=>c.assignees.includes(chWho));
   l.sort((a,b)=>a.done-b.done);
   $('chores').innerHTML=l.length?l.map(c=>`<div class="p-3 rounded-2xl bg-white border border-warm-border flex justify-between items-center ${c.done?'opacity-50':''}" data-id="${c.id}">${GRIP}
     <label class="flex items-center gap-3 flex-1 cursor-pointer"><input type="checkbox" ${c.done?'checked':''} onchange="toggleChore('${c.id}')" class="w-6 h-6 rounded text-emerald-600 focus:ring-0">
-    <span class="text-sm font-bold ${c.done?'line-through text-warm-muted':''}">${esc(c.text)}${c.frequency==='weekly'?`<span class="ml-2 text-[10px] font-semibold text-warm-muted">${esc(c.days[0])}</span>`:''}</span></label>
+    <span class="text-sm font-bold ${c.done?'line-through text-warm-muted':''}">${esc(c.text)}${c.frequency==='weekly'?`<span class="ml-2 text-[10px] font-semibold text-warm-muted">${esc(c.days[0]||'Any day')}</span>`:''}${c.points>1?`<span class="ml-2 text-[10px] font-semibold text-amber-600">${c.points} pts</span>`:''}</span></label>
     <div class="flex items-center gap-1.5">${c.assignees.map(a=>`<span class="text-[10px] font-bold px-2 py-1 rounded-lg border ${a==='Ryan'?'bg-blue-50 text-blue-700':'bg-emerald-50 text-emerald-700'}">${esc(a)}</span>`).join('')}
     <button onclick="delChore('${c.id}')" aria-label="Delete chore" class="ml-1 text-warm-muted hover:text-rose-500">${ic('trash',15)}</button></div></div>`).join(''):'<p class="text-xs text-warm-muted p-2 text-center">No chores match this view.</p>';
 }
-function toggleChore(id){const c=chores.find(x=>x.id===id);if(c){c.done=!c.done;save()}}
+function toggleChore(id){
+  const c=chores.find(x=>x.id===id);if(!c)return;
+  if(c.done){c.done=false;undoLog(c);save();return}
+  if(c.assignees.length>1){askWho(c);return}
+  c.done=true;logIt(c,c.assignees[0]||'');save();
+}
 function delChore(id){if(confirm('Delete this chore?')){chores=chores.filter(x=>x.id!==id);save()}}
 function openChore(){
   openM(mh('Add Chore')+`<div class="space-y-4">${inp('c-t','Chore name','','text')}
     <div><label class="block text-xs font-bold mb-1" for="c-f">Frequency</label><select id="c-f" onchange="$('c-dw').style.display=this.value==='weekly'?'block':'none'" class="w-full bg-warm-subtle border border-warm-border rounded-xl px-3 py-2 text-xs"><option value="daily">Daily</option><option value="weekly">Weekly</option></select></div>
-    <div id="c-dw" style="display:none"><label class="block text-xs font-bold mb-1" for="c-d">Day</label><select id="c-d" class="w-full bg-warm-subtle border border-warm-border rounded-xl px-3 py-2 text-xs">${DAYS.map(d=>`<option>${d}</option>`).join('')}</select></div>
+    <div id="c-dw" style="display:none"><label class="block text-xs font-bold mb-1" for="c-d">Day</label><select id="c-d" class="w-full bg-warm-subtle border border-warm-border rounded-xl px-3 py-2 text-xs"><option value="">Any day this week</option>${DAYS.map(d=>`<option>${d}</option>`).join('')}</select></div>
+    <div><label class="block text-xs font-bold mb-1" for="c-p">Points</label><select id="c-p" class="w-full bg-warm-subtle border border-warm-border rounded-xl px-3 py-2 text-xs"><option value="1">1 (quick)</option><option value="2">2</option><option value="3">3 (big job)</option><option value="5">5 (huge)</option></select></div>
     <div class="flex gap-4 text-xs"><label class="flex items-center gap-2"><input type="checkbox" id="c-h" checked class="rounded text-emerald-600"> Hanna</label><label class="flex items-center gap-2"><input type="checkbox" id="c-r" checked class="rounded text-emerald-600"> Ryan</label></div></div>
     <div class="flex justify-end gap-2 mt-6">${CANCEL}${B('bg-emerald-600 text-white','saveChore()','Save Chore')}</div>`);
 }
 function saveChore(){
   const text=$('c-t').value.trim().slice(0,80),f=$('c-f').value,a=[];if($('c-h').checked)a.push('Hanna');if($('c-r').checked)a.push('Ryan');
   if(!text||!a.length)return;
-  chores.push({id:'c'+Date.now(),text,assignees:a,frequency:f,days:f==='weekly'?[$('c-d').value]:[],done:false});save();closeM();
+  chores.push({id:'c'+Date.now(),text,assignees:a,frequency:f,days:f==='weekly'&&$('c-d').value?[$('c-d').value]:[],points:+$('c-p').value||1,done:false});save();closeM();
 }
 
 /* ---------- Trello ---------- */
@@ -468,9 +479,80 @@ function delRecipe(){
   DAYS.forEach(d=>SLOTS.forEach(s=>{if(meals[d][s]?.recipeId===id)meals[d][s]=null}));save();closeM();
 }
 
+/* ---------- golf game, points and activity log ---------- */
+const WHO=['Hanna','Ryan'];
+const GOLF={Hanna:{y:26,shirt:'#10B981',hair:'#7C4A2D'},Ryan:{y:54,shirt:'#3B82F6',hair:'#2C2A29'}};
+const perWeek=c=>c.frequency==='daily'?7:1;
+// points a person can earn in a week; shared chores count half to each person
+const possible=w=>chores.reduce((t,c)=>c.assignees.includes(w)?t+(c.points||1)*perWeek(c)/c.assignees.length:t,0);
+const earned=(w,wk=weekKey(new Date()))=>log.filter(l=>l.week===wk&&l.who===w).reduce((t,l)=>t+l.pts,0);
+const prog=(w,wk)=>{const p=possible(w);return p?Math.min(1,earned(w,wk)/p):0};
+const pct=w=>Math.round(prog(w)*100);
+function logIt(c,who){const n=new Date();log.push({id:'l'+Date.now(),cid:c.id,text:c.text,who,pts:c.points||1,date:dayKey(n),week:weekKey(n),ts:n.getTime()});log=log.slice(-1500)}
+function undoLog(c){const n=new Date(),dk=dayKey(n),wk=weekKey(n);for(let i=log.length-1;i>=0;i--){const l=log[i];if(l.cid===c.id&&(c.frequency==='daily'?l.date===dk:l.week===wk)){log.splice(i,1);break}}}
+function askWho(c){
+  openM(mh('Who did it?')+`<p class="text-sm mb-4">Who finished <b>${esc(c.text)}</b>?</p><div class="flex gap-3">${c.assignees.map(a=>`<button onclick="pick('${c.id}','${esc(a)}')" class="flex-1 py-4 rounded-2xl text-sm font-bold text-white" style="background:${(GOLF[a]||{}).shirt||'#10B981'}">${esc(a)}</button>`).join('')}</div><div class="flex justify-end mt-4">${B('bg-warm-subtle','closeM()','Cancel')}</div>`);
+  renderChores();
+}
+function pick(id,who){const c=chores.find(x=>x.id===id);if(c&&!c.done){c.done=true;logIt(c,who);save()}closeM()}
+function closeWeek(wk){ // gives the weekly prize to the winner (or splits it on a tie)
+  if(rewards.hist.some(h=>h.week===wk))return;
+  const a=WHO.map(w=>prog(w,wk));if(Math.max(...a)<=0)return;
+  const win=a[0]===a[1]?WHO:[a[0]>a[1]?WHO[0]:WHO[1]],each=Math.max(1,Math.round(rewards.prize/win.length));
+  win.forEach(w=>rewards.bal[w]=(rewards.bal[w]||0)+each);
+  rewards.hist.unshift({week:wk,winners:win,pts:each,pct:a.map(x=>Math.round(x*100))});rewards.hist=rewards.hist.slice(0,26);
+}
+const golfer=o=>`<g class="gb"><circle cx="0" cy="-15" r="6" fill="#FFE0BD"/><path d="M-6.3 -15.5a6.3 6.3 0 0 1 12.6 0z" fill="${o.hair}"/><path d="M-1 -19.5h9" stroke="${o.shirt}" stroke-width="2" stroke-linecap="round"/><circle cx="-2.2" cy="-14" r=".9" fill="#2C2A29"/><circle cx="2.2" cy="-14" r=".9" fill="#2C2A29"/><path d="M-1 -11.5q1 1 2 0" stroke="#C2410C" stroke-width=".8" fill="none"/><rect x="-4.5" y="-9" width="9" height="8" rx="3" fill="${o.shirt}"/><path d="M-2 -1v5M2 -1v5" stroke="#2C2A29" stroke-width="2" stroke-linecap="round"/><path d="M4 -5l9 9" stroke="#78736D" stroke-width="1.5" stroke-linecap="round"/><circle cx="15" cy="4.5" r="1.6" fill="#fff" stroke="#B0B0B0" stroke-width=".5"/></g>`;
+function buildGolf(){
+  const lanes=WHO.map(w=>{const o=GOLF[w],y=o.y;return `<text x="3" y="${y}" font-size="9" font-weight="700" fill="${o.shirt}">${w[0]}</text><line x1="18" x2="372" y1="${y}" y2="${y}" stroke="#B7D9BE" stroke-width="2" stroke-dasharray="3 4"/><circle cx="372" cy="${y}" r="3" fill="#2C2A29"/><path d="M372 ${y}v-17" stroke="#78736D" stroke-width="1.2"/><path d="M372 ${y-17}l10 4-10 4z" fill="${o.shirt}"/><g transform="translate(0,${y-4})"><g id="gf-${w}" class="gf" style="transform:translateX(24px)">${golfer(o)}</g></g>`}).join('');
+  $('golf').innerHTML=`<svg viewBox="0 0 400 64" class="w-full h-full" aria-hidden="true"><rect width="400" height="64" rx="16" fill="#EEF7EF"/>${lanes}</svg>`;
+}
+let lastP={};
+function renderGolf(){
+  const say=[];
+  WHO.forEach(w=>{const p=prog(w),el=$('gf-'+w);say.push(w+' '+Math.round(p*100)+' percent');if(!el)return;
+    el.style.transform=`translateX(${24+p*330}px)`;
+    if(lastP[w]!==undefined&&p>lastP[w]){const b=el.firstElementChild;b.classList.remove('hop');void b.getBoundingClientRect();b.classList.add('hop')}
+    lastP[w]=p});
+  const g=$('golf');if(g)g.setAttribute('aria-label','Weekly golf race: '+say.join(', ')+'. Open scoreboard.');
+}
+function openScore(){
+  const wk=weekKey(new Date()),r1=x=>Math.round(x*10)/10;
+  const bars=WHO.map(w=>`<div class="mb-3"><div class="flex justify-between text-xs font-bold mb-1"><span>${w}</span><span>${r1(earned(w))} / ${r1(possible(w))} pts &middot; ${pct(w)}%</span></div><div class="h-3 bg-warm-subtle rounded-full overflow-hidden"><div class="h-full rounded-full" style="width:${pct(w)}%;background:${GOLF[w].shirt}"></div></div></div>`).join('');
+  const bal=WHO.map(w=>`<div class="flex-1 p-3 rounded-2xl bg-warm-subtle border border-warm-border text-center"><div class="text-[10px] font-bold uppercase text-warm-muted">${w}</div><div class="text-2xl font-display font-bold">${rewards.bal[w]||0}</div><div class="text-[10px] text-warm-muted">reward points</div></div>`).join('');
+  const hist=rewards.hist.slice(0,5).map(h=>`<li>Week of ${esc(h.week)}: ${esc(h.winners.join(' & '))} won +${h.pts} (${h.pct.join('% / ')}%)</li>`).join('')||'<li>No finished weeks yet.</li>';
+  const spent=rewards.spent.slice(0,5).map(x=>`<li>${esc(x.who)} spent ${x.cost} on ${esc(x.what)} (${esc(x.date)})</li>`).join('');
+  const feed=log.filter(l=>l.week===wk).slice(-30).reverse().map(l=>`<li class="flex justify-between py-1 border-b border-warm-subtle"><span>${esc(l.who||'Someone')} did <b>${esc(l.text)}</b></span><span class="text-warm-muted">${esc(l.date.slice(5))} &middot; +${l.pts}</span></li>`).join('')||'<li class="py-1">Nothing yet this week.</li>';
+  const IN='bg-warm-subtle border border-warm-border rounded-lg px-2 py-1.5 text-xs';
+  openM(mh('Scoreboard')+`<h4 class="text-xs font-bold uppercase text-warm-muted mb-2">This week's race</h4>${bars}
+  <div class="flex items-center gap-2 text-xs mb-3">Weekly winner prize <input id="rw-p" type="number" min="1" value="${rewards.prize}" onchange="setPrize()" class="${IN} w-20"> points</div>
+  <div class="flex gap-3 mb-3">${bal}</div>
+  <div class="flex flex-wrap items-center gap-2 text-xs mb-4"><select id="rw-w" class="${IN}">${WHO.map(w=>`<option>${w}</option>`).join('')}</select><input id="rw-t" placeholder="Reward (e.g. pick the movie)" maxlength="60" class="${IN} flex-1 min-w-[140px]"><input id="rw-c" type="number" min="1" placeholder="Cost" class="${IN} w-20">${B('bg-amber-600 text-white','redeem()','Redeem')}</div>
+  <h4 class="text-xs font-bold uppercase text-warm-muted mb-1">Past winners</h4><ul class="text-xs space-y-1 mb-4 list-disc pl-4">${hist}${spent}</ul>
+  <h4 class="text-xs font-bold uppercase text-warm-muted mb-1">Activity this week</h4><ul class="text-xs mb-4 max-h-40 overflow-y-auto">${feed}</ul>
+  <div class="flex items-center gap-2">${B('bg-warm-subtle','backup()','Back up data')}<label class="px-4 py-2 rounded-xl text-xs font-bold bg-warm-subtle cursor-pointer">Restore backup<input type="file" accept=".json,application/json" class="hidden" onchange="restore(this)"></label><span class="text-[10px] text-warm-muted">Backups never include your Trello keys.</span></div>`,'max-w-2xl');
+}
+function setPrize(){rewards.prize=Math.max(1,Math.min(999,Math.floor(+$('rw-p').value)||10));save()}
+function redeem(){
+  const w=$('rw-w').value,cost=Math.floor(+$('rw-c').value),what=$('rw-t').value.trim().slice(0,60);
+  if(!what||!(cost>0))return alert('Add what the reward is and how many points it costs.');
+  if((rewards.bal[w]||0)<cost)return alert(w+' only has '+(rewards.bal[w]||0)+' points.');
+  rewards.bal[w]-=cost;rewards.spent.unshift({who:w,what,cost,date:dayKey(new Date())});save();openScore();
+}
+function backup(){
+  const d={};Object.keys(localStorage).filter(k=>k.startsWith('sl_')).forEach(k=>d[k]=localStorage.getItem(k));
+  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob([JSON.stringify(d)],{type:'application/json'}));a.download='family-hub-backup-'+dayKey(new Date())+'.json';document.body.appendChild(a);a.click();a.remove();
+}
+function restore(inp){
+  const f=inp.files[0];if(!f)return;const r=new FileReader();
+  r.onload=()=>{try{const d=JSON.parse(r.result);if(!obj(d))throw 0;if(!confirm('Replace what is on this device with this backup?'))return;
+    Object.keys(d).filter(k=>/^sl_[a-z_]+$/.test(k)&&typeof d[k]==='string').forEach(k=>localStorage.setItem(k,d[k]));location.reload()}catch{alert('That file does not look like a backup.')}};
+  r.readAsText(f);
+}
+
 /* ---------- boot ---------- */
 window.addEventListener('load',()=>{
-  tab('dashboard');safe('startup',()=>{clean();autoReset()});save();safe('clock',tick);safe('calendar',setupCal);weather();
+  tab('dashboard');safe('startup',()=>{clean();autoReset()});safe('golf',buildGolf);save();safe('clock',tick);safe('calendar',setupCal);weather();
   safe('reorder',()=>{sortable($('chores'),ids=>{chores=applyOrder(chores,ids);save()});sortable($('tasks'),ids=>{tasks=applyOrder(tasks,ids);save()})});
   setInterval(()=>safe('clock',tick),1000);setInterval(weather,1800000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)safe('clock',tick)});
