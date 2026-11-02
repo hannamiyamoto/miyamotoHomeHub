@@ -4,7 +4,9 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://api.trello.com https://api.open-meteo.com; frame-src https://calendar.google.com; img-src 'self' data:; base-uri 'none'; form-action 'none'">
-<title>Family Command Center</title>
+<meta name="robots" content="noindex, nofollow, noarchive">
+<meta name="referrer" content="no-referrer">
+<title>Family Command Center v3</title>
 <script src="https://cdn.tailwindcss.com/3.4.17"></script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script>
@@ -16,6 +18,7 @@ html,body{width:100%;height:100%;margin:0;background:#FBF9F5;color:#2C2A29}
 .drag-over-active{background:#FEF3C7!important;border-color:#F59E0B!important}
 ::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:#D8D1C7;border-radius:9999px}
 button{cursor:pointer}.drag{cursor:grab}
+.grip{touch-action:none;cursor:grab;user-select:none;-webkit-user-select:none}
 </style>
 </head>
 <body class="flex flex-col font-sans antialiased">
@@ -142,6 +145,7 @@ home:'<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V1
 cart:'<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2 2h2l2.7 12.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L22 7H5"/>',
 book:'<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',
 sliders:'<path d="M4 8h16M4 16h16"/><circle cx="9" cy="8" r="2" fill="#fff"/><circle cx="15" cy="16" r="2" fill="#fff"/>',
+grip:'<circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/>',
 plus:'<path d="M5 12h14M12 5v14"/>',x:'<path d="M18 6 6 18M6 6l12 12"/>',
 refresh:'<path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M8 16H3v5"/>',
 trash:'<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
@@ -172,6 +176,29 @@ function oops(where,e){
   console.error(where,e);let b=$('oops');
   if(!b){b=document.createElement('div');b.id='oops';b.className='fixed bottom-3 left-1/2 -translate-x-1/2 z-[60] bg-rose-600 text-white text-xs font-bold px-4 py-2 rounded-xl shadow-lg max-w-[90vw]';document.body.appendChild(b)}
   b.textContent='Something went wrong ('+where+'): '+((e&&e.message)||e);
+}
+const GRIP=`<span data-grip class="grip text-warm-muted px-1 mr-1" role="button" aria-label="Drag to reorder">${ic('grip',18)}</span>`;
+function applyOrder(list,ids){ // puts the dragged items back into the full list in their new order
+  const set=new Set(ids),slots=[],by={};
+  list.forEach((x,i)=>{by[x.id]=x;if(set.has(x.id))slots.push(i)});
+  const out=list.slice();ids.forEach((id,k)=>{if(by[id])out[slots[k]]=by[id]});return out;
+}
+function sortable(box,onDone){ // press and drag the grip dots; works with finger or mouse
+  box.addEventListener('pointerdown',e=>{
+    const h=e.target.closest('[data-grip]'),item=h&&h.closest('[data-id]');if(!item)return;
+    e.preventDefault();item.classList.add('shadow-lg','ring-2','ring-emerald-300');
+    const move=ev=>{
+      const others=[...box.querySelectorAll('[data-id]')].filter(x=>x!==item);let before=null;
+      for(const o of others){const r=o.getBoundingClientRect();if(ev.clientY<r.top+r.height/2){before=o;break}}
+      before?box.insertBefore(item,before):box.appendChild(item);
+    };
+    const up=()=>{
+      document.removeEventListener('pointermove',move);document.removeEventListener('pointerup',up);document.removeEventListener('pointercancel',up);
+      item.classList.remove('shadow-lg','ring-2','ring-emerald-300');
+      onDone([...box.querySelectorAll('[data-id]')].map(x=>x.dataset.id));
+    };
+    document.addEventListener('pointermove',move);document.addEventListener('pointerup',up);document.addEventListener('pointercancel',up);
+  });
 }
 const safe=(w,f)=>{try{f()}catch(e){oops(w,e)}};
 const arr=v=>Array.isArray(v)?v:[];
@@ -278,7 +305,7 @@ function renderChores(){
   let l=chores.filter(c=>chFreq==='daily'?(c.frequency==='daily'||c.days.includes(today)):c.frequency==='weekly');
   if(chWho!=='ALL')l=l.filter(c=>c.assignees.includes(chWho));
   l.sort((a,b)=>a.done-b.done);
-  $('chores').innerHTML=l.length?l.map(c=>`<div class="p-3 rounded-2xl bg-white border border-warm-border flex justify-between items-center ${c.done?'opacity-50':''}">
+  $('chores').innerHTML=l.length?l.map(c=>`<div class="p-3 rounded-2xl bg-white border border-warm-border flex justify-between items-center ${c.done?'opacity-50':''}" data-id="${c.id}">${GRIP}
     <label class="flex items-center gap-3 flex-1 cursor-pointer"><input type="checkbox" ${c.done?'checked':''} onchange="toggleChore('${c.id}')" class="w-6 h-6 rounded text-emerald-600 focus:ring-0">
     <span class="text-sm font-bold ${c.done?'line-through text-warm-muted':''}">${esc(c.text)}${c.frequency==='weekly'?`<span class="ml-2 text-[10px] font-semibold text-warm-muted">${esc(c.days[0])}</span>`:''}</span></label>
     <div class="flex items-center gap-1.5">${c.assignees.map(a=>`<span class="text-[10px] font-bold px-2 py-1 rounded-lg border ${a==='Ryan'?'bg-blue-50 text-blue-700':'bg-emerald-50 text-emerald-700'}">${esc(a)}</span>`).join('')}
@@ -311,7 +338,7 @@ async function trello(listId,names,btn){
 
 /* ---------- tasks ---------- */
 function renderTasks(){
-  $('tasks').innerHTML=tasks.length?tasks.map(t=>`<div class="p-3 rounded-2xl bg-white border border-warm-border flex items-center gap-2 ${t.done?'opacity-50':''}">
+  $('tasks').innerHTML=tasks.length?tasks.map(t=>`<div class="p-3 rounded-2xl bg-white border border-warm-border flex items-center gap-2 ${t.done?'opacity-50':''}" data-id="${t.id}">${GRIP}
     <label class="flex items-center gap-3 flex-1 cursor-pointer"><input type="checkbox" ${t.done?'checked':''} onchange="toggleTask('${t.id}')" class="w-6 h-6 rounded text-purple-600 focus:ring-0"><span class="text-sm font-bold ${t.done?'line-through text-warm-muted':''}">${esc(t.text)}</span></label>
     ${t.assignee&&t.assignee!=='Unassigned'?`<span class="text-[10px] font-bold px-2 py-1 rounded-lg border bg-purple-50 text-purple-700">${esc(t.assignee)}</span>`:''}
     <button onclick="delTask('${t.id}')" aria-label="Delete task" class="text-warm-muted hover:text-rose-500">${ic('trash',15)}</button></div>`).join(''):'<p class="text-xs text-warm-muted p-2 text-center">No active tasks.</p>';
@@ -444,6 +471,7 @@ function delRecipe(){
 /* ---------- boot ---------- */
 window.addEventListener('load',()=>{
   tab('dashboard');safe('startup',()=>{clean();autoReset()});save();safe('clock',tick);safe('calendar',setupCal);weather();
+  safe('reorder',()=>{sortable($('chores'),ids=>{chores=applyOrder(chores,ids);save()});sortable($('tasks'),ids=>{tasks=applyOrder(tasks,ids);save()})});
   setInterval(()=>safe('clock',tick),1000);setInterval(weather,1800000);
   document.addEventListener('visibilitychange',()=>{if(!document.hidden)safe('clock',tick)});
 });
