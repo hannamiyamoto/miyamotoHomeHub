@@ -19,7 +19,7 @@ button{cursor:pointer}.drag{cursor:grab}
 </style>
 </head>
 <body class="flex flex-col font-sans antialiased">
-
+ 
 <header class="h-20 px-8 flex items-center justify-between shrink-0 bg-white border-b border-warm-border">
   <div class="flex items-center gap-6">
     <div class="min-w-[120px]">
@@ -39,7 +39,7 @@ button{cursor:pointer}.drag{cursor:grab}
     <button onclick="openSettings()" aria-label="Settings" class="px-4 py-2.5 rounded-xl bg-warm-subtle border border-warm-border hover:bg-warm-border"><i data-i="sliders" data-s="18"></i></button>
   </nav>
 </header>
-
+ 
 <main class="flex-1 p-6 overflow-hidden">
   <div id="t-dashboard" class="h-full flex gap-6">
     <section class="w-1/2 flex flex-col gap-6 h-full overflow-hidden">
@@ -95,7 +95,7 @@ button{cursor:pointer}.drag{cursor:grab}
       </div>
     </section>
   </div>
-
+ 
   <div id="t-grocery" class="h-full hidden flex-col card rounded-3xl p-6 overflow-hidden">
     <div class="flex items-center justify-between pb-5 border-b border-warm-border shrink-0">
       <div><h2 class="font-display font-bold text-xl">Smart Grocery List</h2><p class="text-xs text-warm-muted">Built from this week's meal plan. Pantry staples are skipped.</p></div>
@@ -118,7 +118,7 @@ button{cursor:pointer}.drag{cursor:grab}
       </div>
     </div>
   </div>
-
+ 
   <div id="t-recipes" class="h-full hidden flex-col card rounded-3xl p-6 overflow-hidden">
     <div class="flex items-center justify-between pb-5 border-b border-warm-border shrink-0">
       <h2 class="font-display font-bold text-xl">Recipe Vault</h2>
@@ -127,11 +127,11 @@ button{cursor:pointer}.drag{cursor:grab}
     <div id="vault" class="flex-1 overflow-y-auto py-4 grid grid-cols-3 lg:grid-cols-4 gap-4 content-start"></div>
   </div>
 </main>
-
+ 
 <div id="m" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden items-center justify-center p-4 z-50" onclick="if(event.target===this)closeM()">
   <div id="mc" class="bg-white border border-warm-border rounded-3xl w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true"></div>
 </div>
-
+ 
 <script>
 /* ---------- helpers ---------- */
 const $=id=>document.getElementById(id);
@@ -157,7 +157,7 @@ const ic=(n,s=16)=>`<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height=
 const hydrate=()=>document.querySelectorAll('i[data-i]').forEach(e=>e.outerHTML=ic(e.dataset.i,+e.dataset.s||16));
 const load=(k,f)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):f}catch{return f}};
 const cfg=k=>localStorage.getItem('cfg_'+k)||'';
-
+ 
 /* ---------- state ---------- */
 const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],SLOTS=['breakfast','lunch','dinner'];
 let recipes=load('sl_recipes',[]),chores=load('sl_chores',[]),tasks=load('sl_tasks',[]),manual=load('sl_manual_groceries',[]),
@@ -166,13 +166,13 @@ pantry=load('sl_pantry',{'Soy Sauce':true,'White Rice':true,'Olive Oil':true,'Sa
 let meals=load('sl_meals',null);
 if(!meals||!meals.Monday){meals={};DAYS.forEach(d=>meals[d]={breakfast:null,lunch:null,dinner:null})}
 let groceries=[],skipped=[],chFreq='daily',chWho='ALL',picked=null;
-
+ 
 function save(){
   const d={sl_recipes:recipes,sl_chores:chores,sl_tasks:tasks,sl_meals:meals,sl_pantry:pantry,sl_manual_groceries:manual,sl_del_groceries:hidden,sl_checked:checked,sl_pushed:pushed,sl_meta:meta};
   try{for(const k in d)localStorage.setItem(k,JSON.stringify(d[k]))}catch(e){alert('Storage is full or blocked; changes may not be saved.')}
   extract();renderAll();
 }
-
+ 
 /* ---------- automatic daily / weekly reset ---------- */
 const dayName=()=>new Date().toLocaleDateString('en-US',{weekday:'long'});
 const dayKey=d=>d.toLocaleDateString('en-CA');
@@ -183,7 +183,7 @@ function autoReset(){
   if(meta.week!==wk){chores.forEach(c=>{if(c.frequency==='weekly')c.done=false});meta.week=wk;ch=true}
   return ch;
 }
-
+ 
 /* ---------- shell ---------- */
 function renderAll(){renderChores();renderTasks();renderToday();renderVault();renderGroceries();hydrate()}
 const BASE='px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ';
@@ -201,7 +201,7 @@ async function weather(){
   try{const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=33.6846&longitude=-117.8265&current_weather=true&temperature_unit=fahrenheit');
   $('temp').textContent=Math.round((await r.json()).current_weather.temperature)+'°F'}catch{}
 }
-
+ 
 /* ---------- modal ---------- */
 const mh=t=>`<div class="flex justify-between items-center mb-4"><h3 class="font-display font-bold text-lg">${t}</h3><button onclick="closeM()" aria-label="Close" class="text-warm-muted hover:text-rose-500">${ic('x',20)}</button></div>`;
 function openM(html,w='max-w-md'){$('mc').className=`bg-white border border-warm-border rounded-3xl w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto ${w}`;$('mc').innerHTML=html;$('m').classList.remove('hidden');$('m').classList.add('flex');hydrate()}
@@ -210,7 +210,7 @@ const inp=(id,l,v='',t='text',ph='')=>`<div><label class="block text-xs font-bol
 const area=(id,l,v='')=>`<div><label class="block text-xs font-bold mb-1" for="${id}">${l}</label><textarea id="${id}" rows="4" class="w-full bg-warm-subtle border border-warm-border rounded-xl px-3 py-2 text-xs">${esc(v)}</textarea></div>`;
 const B=(c,f,t)=>`<button onclick="${f}" class="px-4 py-2 rounded-xl text-xs font-bold ${c}">${t}</button>`;
 const CANCEL=B('bg-warm-subtle','closeM()','Cancel');
-
+ 
 /* ---------- settings (nothing is hardcoded; values live only in this device's storage) ---------- */
 function openSettings(){
   const sec=(id,l,k)=>inp(id,l,'','password',cfg(k)?'Saved. Leave blank to keep.':'');
@@ -231,7 +231,7 @@ function saveSettings(){
   localStorage.setItem('cfg_g_embed',c);closeM();setupCal();
 }
 function wipeKeys(){if(confirm('Remove Trello key and token from this device?')){['t_api','t_token'].forEach(k=>localStorage.removeItem('cfg_'+k));closeM()}}
-
+ 
 /* ---------- calendar ---------- */
 function calUrl(mode,raw=cfg('g_embed')){
   const m=raw.match(/src="([^"]+)"/);if(m)raw=m[1];
@@ -247,7 +247,7 @@ function openCal(){
   const u=calUrl('MONTH');if(!u)return alert('Add your Google Calendar embed link in Settings first.');
   openM(`<div class="flex flex-col h-full">${mh('Calendar')}<iframe title="Month calendar" src="${esc(u)}" class="flex-1 rounded-xl border border-warm-border" style="border:0" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe></div>`,'max-w-6xl h-[85vh]');
 }
-
+ 
 /* ---------- chores ---------- */
 function renderChores(){
   const SEG='px-3 py-1 rounded-lg text-xs font-bold ';
@@ -277,7 +277,7 @@ function saveChore(){
   if(!text||!a.length)return;
   chores.push({id:'c'+Date.now(),text,assignees:a,frequency:f,days:f==='weekly'?[$('c-d').value]:[],done:false});save();closeM();
 }
-
+ 
 /* ---------- Trello ---------- */
 async function trello(listId,names,btn){
   const key=cfg('t_api'),token=cfg('t_token');
@@ -287,7 +287,7 @@ async function trello(listId,names,btn){
   catch(e){alert('Sync failed: '+e.message);btn.textContent='Failed'}
   setTimeout(()=>{btn.innerHTML=orig;hydrate()},2000);return ok;
 }
-
+ 
 /* ---------- tasks ---------- */
 function renderTasks(){
   $('tasks').innerHTML=tasks.length?tasks.map(t=>`<div class="p-3 rounded-2xl bg-white border border-warm-border flex items-center gap-2 ${t.done?'opacity-50':''}">
@@ -306,7 +306,7 @@ async function syncTasks(b){
   const todo=tasks.filter(t=>!t.done&&!t.synced);if(!todo.length)return alert('Nothing new to sync.');
   if(await trello(cfg('t_task_list'),todo.map(t=>t.assignee&&t.assignee!=='Unassigned'?`[${t.assignee}] ${t.text}`:t.text),b)){todo.forEach(t=>t.synced=true);save()}
 }
-
+ 
 /* ---------- meals ---------- */
 const recOf=m=>m?recipes.find(r=>r.id===m.recipeId):null;
 function renderToday(){
@@ -337,7 +337,7 @@ function drop(e,d,s){
   if(p[0]==='m'){meals[p[1]][p[2]]=null;id=p[3]}else if(p[0]==='r')id=p[1];else return;
   setMeal(d,s,id);
 }
-
+ 
 /* ---------- groceries (auto-built from the meal plan) ---------- */
 const pantryHit=n=>Object.keys(pantry).find(p=>pantry[p]&&new RegExp('\\b'+p.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i').test(n));
 function cat(n){const l=n.toLowerCase(),has=w=>w.some(x=>l.includes(x));
@@ -370,7 +370,7 @@ async function pushGroceries(b){
   if(!items.length)return alert('Nothing new to push.');
   if(await trello(cfg('t_groc_list'),items.map(i=>i.n),b)){pushed.push(...items.map(i=>i.k));save()}
 }
-
+ 
 /* ---------- recipes ---------- */
 function renderVault(){
   $('vault').innerHTML=recipes.length?recipes.map(r=>`<div class="card rounded-2xl p-4 cursor-pointer hover:border-amber-400 group" onclick="openCook('${r.id}')"><div class="flex justify-between items-start mb-3"><span class="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">${ic('utensils',18)}</span>
@@ -419,7 +419,7 @@ function delRecipe(){
   if(!confirm('Delete this recipe?'))return;const id=$('r-id').value;recipes=recipes.filter(r=>r.id!==id);
   DAYS.forEach(d=>SLOTS.forEach(s=>{if(meals[d][s]?.recipeId===id)meals[d][s]=null}));save();closeM();
 }
-
+ 
 /* ---------- boot ---------- */
 window.addEventListener('load',()=>{
   tab('dashboard');autoReset();save();tick();setupCal();weather();
