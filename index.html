@@ -1,920 +1,431 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Family Command Center</title>
-  
-  <!-- Tailwind & Fonts Only (No external Icon scripts to prevent freezing) -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
-  
-  <script>
-    tailwind.config = { theme: { extend: { fontFamily: { sans: ['"Plus Jakarta Sans"', 'sans-serif'], display: ['Outfit', 'sans-serif'] }, colors: { warm: { bg: '#FBF9F5', card: '#FFFFFF', subtle: '#F4F0E8', border: '#E5DFD5', text: '#2C2A29', muted: '#78736D' } } } } }
-  </script>
-  <style>
-    html, body { width: 100%; height: 100%; margin: 0; padding: 0; }
-    body { background-color: #FBF9F5; color: #2C2A29; }
-    .warm-card { background: #FFFFFF; border: 1px solid #E5DFD5; box-shadow: 0 4px 20px -2px rgba(44, 42, 41, 0.04); }
-    .drag-over-active { background-color: #FEF3C7 !important; border-color: #F59E0B !important; border-style: dashed !important; }
-    ::-webkit-scrollbar { width: 6px; height: 6px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #D8D1C7; border-radius: 9999px; }
-    .draggable-item { cursor: grab; } .draggable-item:active { cursor: grabbing; }
-    button { cursor: pointer; }
-  </style>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://api.trello.com https://api.open-meteo.com; frame-src https://calendar.google.com; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<title>Family Command Center</title>
+<script src="https://cdn.tailwindcss.com/3.4.17"></script>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<script>
+tailwind.config={theme:{extend:{fontFamily:{sans:['"Plus Jakarta Sans"','sans-serif'],display:['Outfit','sans-serif']},colors:{warm:{bg:'#FBF9F5',subtle:'#F4F0E8',border:'#E5DFD5',text:'#2C2A29',muted:'#78736D'}}}}}
+</script>
+<style>
+html,body{width:100%;height:100%;margin:0;background:#FBF9F5;color:#2C2A29}
+.card{background:#fff;border:1px solid #E5DFD5;box-shadow:0 4px 20px -2px rgba(44,42,41,.04)}
+.drag-over-active{background:#FEF3C7!important;border-color:#F59E0B!important}
+::-webkit-scrollbar{width:6px;height:6px}::-webkit-scrollbar-thumb{background:#D8D1C7;border-radius:9999px}
+button{cursor:pointer}.drag{cursor:grab}
+</style>
 </head>
-<body class="flex flex-col font-sans antialiased bg-warm-bg text-warm-text relative">
+<body class="flex flex-col font-sans antialiased">
 
-  <!-- ================= HEADER ================= -->
-  <header class="h-20 px-8 flex items-center justify-between shrink-0 bg-white border-b border-warm-border z-10 shadow-xs relative">
-    <div class="flex items-center gap-6">
-      <div class="flex flex-col min-w-[120px]">
-        <div id="live-time" class="text-3xl font-display font-bold tracking-tight text-warm-text leading-none">--:--</div>
-        <div id="live-date" class="text-xs font-semibold text-warm-muted mt-1 uppercase tracking-wider">Loading...</div>
-      </div>
-      <div class="h-8 w-[1px] bg-warm-border"></div>
-      <div class="flex items-center gap-3 shrink-0">
-        <span id="weather-icon" class="text-3xl">☀️</span>
-        <div class="flex flex-col">
-          <div id="weather-temp" class="text-lg font-bold text-warm-text leading-tight">--°F</div>
-          <div class="text-[10px] font-semibold text-warm-muted uppercase tracking-wider">Orange County</div>
-        </div>
-      </div>
+<header class="h-20 px-8 flex items-center justify-between shrink-0 bg-white border-b border-warm-border">
+  <div class="flex items-center gap-6">
+    <div class="min-w-[120px]">
+      <div id="clock" class="text-3xl font-display font-bold leading-none">--:--</div>
+      <div id="date" class="text-xs font-semibold text-warm-muted mt-1 uppercase tracking-wider"></div>
     </div>
-    <div class="flex items-center gap-4 shrink-0">
-      <button onclick="switchTab('dashboard')" id="nav-btn-dashboard" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-emerald-600 text-white shadow-md flex items-center gap-2">🏠 Dashboard</button>
-      <button onclick="switchTab('grocery')" id="nav-btn-grocery" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-white border border-warm-border text-warm-text hover:bg-warm-subtle flex items-center gap-2">🛒 Groceries</button>
-      <button onclick="switchTab('recipes')" id="nav-btn-recipes" class="px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-white border border-warm-border text-warm-text hover:bg-warm-subtle flex items-center gap-2">📖 Vault</button>
-      <!-- Fixed Gear Button -->
-      <button onclick="openSettingsModal()" class="px-4 py-2.5 rounded-xl bg-warm-subtle border border-warm-border text-warm-text hover:bg-warm-border transition-all text-base shadow-sm">⚙️</button>
-    </div>
-  </header>
-
-  <!-- ================= MAIN CONTENT ================= -->
-  <main class="flex-1 p-6 overflow-hidden relative z-0">
-    
-    <!-- DASHBOARD TAB -->
-    <div id="tab-dashboard" class="h-full flex gap-6">
-      
-      <!-- LEFT COLUMN -->
-      <section class="w-1/2 flex flex-col gap-6 overflow-hidden h-full">
-        <!-- Chores -->
-        <div class="h-1/2 flex flex-col warm-card rounded-3xl p-5 overflow-hidden">
-          <div class="flex flex-col gap-3 pb-3 border-b border-warm-border shrink-0">
-            <div class="flex items-center justify-between">
-              <div class="flex items-center gap-2.5">
-                <div class="text-xl p-1.5 rounded-xl bg-emerald-50 border border-emerald-200">✨</div>
-                <h2 class="font-display font-bold text-base text-warm-text">Household Chores</h2>
-              </div>
-              <div class="flex gap-2">
-                <button onclick="openAddChoreModal()" class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold border border-emerald-200 flex items-center gap-1.5">➕ Add</button>
-                <button onclick="resetChores()" class="px-3 py-1.5 rounded-xl bg-warm-subtle text-warm-muted hover:text-emerald-700 text-[10px] font-bold border flex items-center gap-1.5">🔄 Reset</button>
-              </div>
-            </div>
-            <div class="flex items-center justify-between pt-1">
-              <div class="flex bg-warm-subtle p-1 rounded-xl">
-                <button onclick="setChoreFrequency('daily')" id="freq-btn-daily" class="bg-white shadow-sm text-warm-text px-3 py-1 rounded-lg text-xs font-bold transition-all">Daily</button>
-                <button onclick="setChoreFrequency('weekly')" id="freq-btn-weekly" class="text-warm-muted hover:text-warm-text px-3 py-1 rounded-lg text-xs font-bold transition-all">Weekly</button>
-              </div>
-              <div class="flex items-center gap-1.5">
-                <button onclick="setChoreFilter('ALL')" id="filter-btn-ALL" class="px-3 py-1 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow-xs">All</button>
-                <button onclick="setChoreFilter('Hanna')" id="filter-btn-Hanna" class="px-3 py-1 rounded-xl text-xs font-bold border border-warm-border bg-white text-warm-muted">Hanna</button>
-                <button onclick="setChoreFilter('Ryan')" id="filter-btn-Ryan" class="px-3 py-1 rounded-xl text-xs font-bold border border-warm-border bg-white text-warm-muted">Ryan</button>
-              </div>
-            </div>
-          </div>
-          <div class="flex-1 overflow-y-auto my-2 space-y-2 pr-2" id="chores-main-container"></div>
-        </div>
-
-        <!-- Tasks -->
-        <div class="h-1/2 flex flex-col warm-card rounded-3xl p-5 overflow-hidden">
-          <div class="flex items-center justify-between pb-3 border-b border-warm-border shrink-0">
-            <div class="flex items-center gap-2.5">
-              <div class="text-xl p-1.5 rounded-xl bg-purple-50 border border-purple-200">📋</div>
-              <h2 class="font-display font-bold text-base text-warm-text">One-Off Tasks</h2>
-            </div>
-            <div class="flex gap-2">
-                <button onclick="openAddTaskModal()" class="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 text-xs font-bold border border-purple-200 flex items-center gap-1.5">➕ Add</button>
-                <button onclick="syncTasksToTrello()" id="trello-tasks-sync-btn" class="px-3 py-1.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-bold flex items-center gap-1.5">🔄 Sync</button>
-            </div>
-          </div>
-          <div class="flex-1 overflow-y-auto my-2 space-y-2 pr-1" id="tasks-main-container"></div>
-        </div>
-      </section>
-
-      <!-- RIGHT COLUMN -->
-      <section class="w-1/2 flex flex-col gap-6 overflow-hidden h-full">
-        <!-- Schedule (Native Embed) -->
-        <div class="h-1/2 flex flex-col warm-card rounded-3xl p-5 overflow-hidden">
-          <div class="flex items-center justify-between pb-3 shrink-0">
-            <div class="flex items-center gap-2.5">
-              <div class="text-xl p-1.5 rounded-xl bg-blue-50 border border-blue-200">📅</div>
-              <h3 class="font-display font-bold text-base text-warm-text">Today's Schedule</h3>
-            </div>
-            <button onclick="openCalendarEmbedModal()" class="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold border border-blue-200 flex items-center gap-1">📅 Month View</button>
-          </div>
-          <div class="flex-1 overflow-hidden mt-1 rounded-xl border border-warm-border relative bg-warm-subtle">
-             <iframe id="dashboard-calendar-iframe" class="w-full h-full hidden" frameborder="0" scrolling="no"></iframe>
-             <div id="dashboard-calendar-fallback" class="absolute inset-0 flex flex-col items-center justify-center text-warm-muted">
-                 <div class="text-3xl mb-2">📅</div>
-                 <p class="text-xs font-bold text-center px-4">Calendar not linked yet.<br>Click the ⚙️ icon to add your Google link.</p>
-             </div>
-          </div>
-        </div>
-
-        <!-- Meals -->
-        <div class="h-1/2 flex flex-col warm-card rounded-3xl p-5 overflow-hidden">
-          <div class="flex items-center justify-between pb-3 border-b border-warm-border shrink-0">
-            <div class="flex items-center gap-2.5">
-              <div class="text-xl p-1.5 rounded-xl bg-amber-50 border border-amber-200">🍽️</div>
-              <h3 class="font-display font-bold text-base text-warm-text">Today's Meals</h3>
-            </div>
-            <button onclick="openMealPlannerModal()" class="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs font-bold border border-amber-200">🍽️ Plan Week</button>
-          </div>
-          <div class="flex-1 flex flex-col justify-center my-2 gap-2" id="today-meal-slots"></div>
-        </div>
-      </section>
-    </div>
-
-    <!-- GROCERIES TAB -->
-    <div id="tab-grocery" class="h-full hidden flex-col warm-card rounded-3xl p-6 overflow-hidden">
-      <div class="flex items-center justify-between pb-5 border-b border-warm-border shrink-0">
-        <div>
-          <h2 class="font-display font-bold text-xl text-warm-text">Smart Grocery List</h2>
-          <p class="text-xs text-warm-muted">Items are prefixed with categories when pushed to Trello.</p>
-        </div>
-        <div class="flex gap-4">
-           <div class="flex gap-2">
-             <input type="text" id="manual-grocery-input" placeholder="Add custom item..." class="px-3 py-2 border border-warm-border rounded-xl text-xs bg-warm-subtle w-48">
-             <button onclick="addManualGrocery()" class="px-3 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold">➕ Add</button>
-           </div>
-           <button onclick="syncGroceriesToTrello()" id="trello-grocery-sync-btn" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-2">🔄 Push to Trello</button>
-        </div>
-      </div>
-      <div class="flex-1 overflow-y-auto py-4 flex gap-6">
-        <div class="w-2/3 flex flex-col gap-4 h-max">
-            <div class="grid grid-cols-2 gap-4" id="grocery-categories-container"></div>
-            <div class="mt-4"><button onclick="clearDeletedGroceries()" class="text-[10px] font-bold text-warm-muted hover:text-warm-text underline">Restore Hidden Items</button></div>
-        </div>
-        <div class="w-1/3 bg-warm-subtle border border-warm-border rounded-2xl p-4 h-max">
-          <h3 class="font-bold text-sm text-warm-text mb-1 flex items-center gap-2">🥫 Pantry Staples</h3>
-          <p class="text-[10px] text-warm-muted mb-4 leading-snug">Checked items skip the grocery list via fuzzy matching.</p>
-          <div id="pantry-staples-container" class="space-y-2 max-h-60 overflow-y-auto"></div>
-          <div class="mt-4 pt-3 border-t border-warm-border">
-              <h4 class="text-[10px] font-bold text-emerald-700 uppercase mb-2">Skipped This Week:</h4>
-              <ul id="pantry-skipped-list" class="text-[10px] text-warm-muted space-y-1 list-disc pl-4"></ul>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- RECIPE VAULT TAB -->
-    <div id="tab-recipes" class="h-full hidden flex-col warm-card rounded-3xl p-6 overflow-hidden">
-      <div class="flex items-center justify-between pb-5 border-b border-warm-border shrink-0">
-        <h2 class="font-display font-bold text-xl text-warm-text">Recipe Vault</h2>
-        <button onclick="openAddRecipeModal()" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold flex items-center gap-2">➕ Add Recipe</button>
-      </div>
-      <div class="flex-1 overflow-y-auto py-4 grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-4" id="recipe-vault-grid"></div>
-    </div>
-  </main>
-
-  <!-- ================= MODALS ================= -->
-
-  <!-- SETTINGS MODAL -->
-  <div id="modal-settings" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden" onclick="if(event.target === this) closeModals()">
-    <div class="bg-white border border-warm-border rounded-3xl max-w-md w-full p-6 shadow-xl">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="font-display font-bold text-lg text-warm-text flex items-center gap-2">⚙️ Settings</h3>
-        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500 text-lg">❌</button>
-      </div>
-      <div class="space-y-3 max-h-[60vh] overflow-y-auto pr-2">
-        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Google Calendar Embed URL</label><input type="text" id="set-g-embed" placeholder="https://calendar.google.com/calendar/embed?src=..." class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
-        <hr class="my-2 border-warm-border">
-        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Trello REST API Key</label><input type="password" id="set-t-api" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
-        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Trello Token</label><input type="password" id="set-t-token" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
-        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Trello Grocery List ID</label><input type="text" id="set-t-groc-list" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
-        <div><label class="block text-[10px] font-bold uppercase text-blue-600 mb-1">Trello Tasks List ID</label><input type="text" id="set-t-task-list" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
-        <hr class="my-2 border-warm-border">
-        <div><label class="block text-[10px] font-bold uppercase text-purple-600 mb-1">Gemini AI Key (For Recipes)</label><input type="password" id="set-ai-api" class="w-full bg-warm-subtle border rounded-lg px-3 py-2 text-xs"></div>
-      </div>
-      <div class="flex justify-end gap-2 mt-6">
-        <button onclick="closeModals()" class="px-4 py-2 bg-warm-subtle rounded-xl text-xs font-bold">Cancel</button>
-        <button onclick="saveSettings()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold">Save Keys</button>
-      </div>
+    <div class="h-8 w-px bg-warm-border"></div>
+    <div class="flex items-center gap-3">
+      <span class="text-amber-500"><i data-i="sun" data-s="30"></i></span>
+      <div><div id="temp" class="text-lg font-bold leading-tight">--°F</div><div class="text-[10px] font-semibold text-warm-muted uppercase tracking-wider">Orange County</div></div>
     </div>
   </div>
+  <nav class="flex items-center gap-3">
+    <button data-tab="dashboard" onclick="tab('dashboard')"><i data-i="home"></i> Dashboard</button>
+    <button data-tab="grocery" onclick="tab('grocery')"><i data-i="cart"></i> Groceries</button>
+    <button data-tab="recipes" onclick="tab('recipes')"><i data-i="book"></i> Vault</button>
+    <button onclick="openSettings()" aria-label="Settings" class="px-4 py-2.5 rounded-xl bg-warm-subtle border border-warm-border hover:bg-warm-border"><i data-i="sliders" data-s="18"></i></button>
+  </nav>
+</header>
 
-  <!-- ADD/EDIT RECIPE MODAL -->
-  <div id="modal-add-recipe" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden" onclick="if(event.target === this) closeModals()">
-    <div class="bg-white border border-warm-border rounded-3xl max-w-lg w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto">
-      <div class="flex justify-between items-center mb-4">
-        <h3 id="recipe-modal-title" class="font-display font-bold text-lg text-warm-text">Add Recipe</h3>
-        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500 text-lg">❌</button>
+<main class="flex-1 p-6 overflow-hidden">
+  <div id="t-dashboard" class="h-full flex gap-6">
+    <section class="w-1/2 flex flex-col gap-6 h-full overflow-hidden">
+      <div class="h-1/2 flex flex-col card rounded-3xl p-5 overflow-hidden">
+        <div class="flex flex-col gap-3 pb-3 border-b border-warm-border shrink-0">
+          <div class="flex items-center justify-between">
+            <h2 class="font-display font-bold text-base flex items-center gap-2.5"><span class="p-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700"><i data-i="check"></i></span>Household Chores</h2>
+            <button onclick="openChore()" class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold border border-emerald-200 flex items-center gap-1.5"><i data-i="plus" data-s="14"></i> Add</button>
+          </div>
+          <div class="flex items-center justify-between">
+            <div class="flex bg-warm-subtle p-1 rounded-xl gap-1">
+              <button data-freq="daily" onclick="chFreq='daily';renderChores()">Daily</button>
+              <button data-freq="weekly" onclick="chFreq='weekly';renderChores()">Weekly</button>
+            </div>
+            <div class="flex gap-1.5">
+              <button data-who="ALL" onclick="chWho='ALL';renderChores()">All</button>
+              <button data-who="Hanna" onclick="chWho='Hanna';renderChores()">Hanna</button>
+              <button data-who="Ryan" onclick="chWho='Ryan';renderChores()">Ryan</button>
+            </div>
+          </div>
+        </div>
+        <div id="chores" class="flex-1 overflow-y-auto my-2 space-y-2 pr-2"></div>
+        <p class="text-[10px] text-warm-muted shrink-0">Daily chores reset at midnight. Weekly chores reset Monday.</p>
       </div>
-      
-      <!-- AI Import Section -->
-      <div id="ai-import-box" class="mb-4 p-4 bg-purple-50 border border-purple-200 rounded-xl flex flex-col gap-2">
-          <label class="text-[10px] font-bold uppercase text-purple-700 flex items-center gap-1">✨ AI Auto-Import</label>
+      <div class="h-1/2 flex flex-col card rounded-3xl p-5 overflow-hidden">
+        <div class="flex items-center justify-between pb-3 border-b border-warm-border shrink-0">
+          <h2 class="font-display font-bold text-base flex items-center gap-2.5"><span class="p-1.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-700"><i data-i="list"></i></span>One-Off Tasks</h2>
           <div class="flex gap-2">
-            <textarea id="ai-recipe-input" placeholder="Paste full recipe text here..." rows="2" class="flex-1 bg-white border border-purple-200 rounded-lg px-3 py-2 text-xs resize-none"></textarea>
-            <button onclick="importAiRecipe()" id="ai-btn" class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold transition-all self-center">Import</button>
+            <button onclick="openTask()" class="px-3 py-1.5 rounded-xl bg-purple-50 text-purple-700 hover:bg-purple-100 text-xs font-bold border border-purple-200 flex items-center gap-1.5"><i data-i="plus" data-s="14"></i> Add</button>
+            <button onclick="syncTasks(this)" class="px-3 py-1.5 rounded-xl bg-blue-600 text-white hover:bg-blue-700 text-xs font-bold flex items-center gap-1.5"><i data-i="refresh" data-s="14"></i> Sync</button>
           </div>
-          <div id="ai-error-msg" class="text-[10px] text-rose-600 font-bold hidden"></div>
-      </div>
-
-      <div class="space-y-4">
-        <input type="hidden" id="input-recipe-id">
-        <div><label class="block text-xs font-bold text-warm-text mb-1">Recipe Title</label><input type="text" id="input-recipe-title" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs"></div>
-        <div><label class="block text-xs font-bold text-warm-text mb-1">Recipe Link (Optional)</label><input type="text" id="input-recipe-link" placeholder="https://..." class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs"></div>
-        <div><label class="block text-xs font-bold text-warm-text mb-1">Ingredients (One per line)</label><textarea id="input-recipe-ingredients" rows="4" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs" placeholder="1 cup flour&#10;2 tbsp olive oil"></textarea></div>
-        <div><label class="block text-xs font-bold text-warm-text mb-1">Instructions</label><textarea id="input-recipe-instructions" rows="4" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs"></textarea></div>
-      </div>
-      <div class="flex justify-between items-center mt-6">
-        <button onclick="deleteCurrentRecipe()" id="btn-delete-recipe" class="px-4 py-2 bg-rose-50 text-rose-600 rounded-xl text-xs font-bold hidden hover:bg-rose-100">🗑️ Delete</button>
-        <div class="flex gap-2 ml-auto">
-            <button onclick="closeModals()" class="px-4 py-2 bg-warm-subtle rounded-xl text-xs font-bold text-warm-text">Cancel</button>
-            <button onclick="saveRecipe()" class="px-4 py-2 bg-rose-500 text-white rounded-xl text-xs font-bold">Save Recipe</button>
         </div>
+        <div id="tasks" class="flex-1 overflow-y-auto my-2 space-y-2 pr-1"></div>
+      </div>
+    </section>
+    <section class="w-1/2 flex flex-col gap-6 h-full overflow-hidden">
+      <div class="h-1/2 flex flex-col card rounded-3xl p-5 overflow-hidden">
+        <div class="flex items-center justify-between pb-3 shrink-0">
+          <h3 class="font-display font-bold text-base flex items-center gap-2.5"><span class="p-1.5 rounded-xl bg-blue-50 border border-blue-200 text-blue-700"><i data-i="cal"></i></span>Today's Schedule</h3>
+          <button onclick="openCal()" class="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold border border-blue-200 flex items-center gap-1.5"><i data-i="cal" data-s="14"></i> Month View</button>
+        </div>
+        <div class="flex-1 overflow-hidden rounded-xl border border-warm-border relative bg-warm-subtle">
+          <iframe id="cal-frame" title="Today's schedule" class="w-full h-full hidden" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+          <div id="cal-empty" class="absolute inset-0 flex flex-col items-center justify-center text-warm-muted text-xs font-bold text-center px-4">Calendar not linked yet.<br>Open Settings and paste your Google Calendar embed link.</div>
+        </div>
+      </div>
+      <div class="h-1/2 flex flex-col card rounded-3xl p-5 overflow-hidden">
+        <div class="flex items-center justify-between pb-3 border-b border-warm-border shrink-0">
+          <h3 class="font-display font-bold text-base flex items-center gap-2.5"><span class="p-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700"><i data-i="utensils"></i></span>Today's Meals</h3>
+          <button onclick="openPlanner()" class="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs font-bold border border-amber-200">Plan Week</button>
+        </div>
+        <div id="today-meals" class="flex-1 flex flex-col justify-center my-2 gap-2"></div>
+      </div>
+    </section>
+  </div>
+
+  <div id="t-grocery" class="h-full hidden flex-col card rounded-3xl p-6 overflow-hidden">
+    <div class="flex items-center justify-between pb-5 border-b border-warm-border shrink-0">
+      <div><h2 class="font-display font-bold text-xl">Smart Grocery List</h2><p class="text-xs text-warm-muted">Built from this week's meal plan. Pantry staples are skipped.</p></div>
+      <div class="flex gap-3">
+        <input id="g-new" placeholder="Add custom item..." maxlength="80" class="px-3 py-2 border border-warm-border rounded-xl text-xs bg-warm-subtle w-48">
+        <button onclick="addManual()" class="px-3 py-2 bg-amber-600 text-white rounded-xl text-xs font-bold">Add</button>
+        <button onclick="pushGroceries(this)" class="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-bold flex items-center gap-2"><i data-i="refresh" data-s="14"></i> Push to Trello</button>
+      </div>
+    </div>
+    <div class="flex-1 overflow-y-auto py-4 flex gap-6">
+      <div class="w-2/3"><div class="grid grid-cols-2 gap-4" id="g-cats"></div>
+        <button onclick="hidden=[];pushed=[];save()" class="mt-4 text-[10px] font-bold text-warm-muted hover:text-warm-text underline">Restore hidden items and reset "pushed"</button></div>
+      <div class="w-1/3 bg-warm-subtle border border-warm-border rounded-2xl p-4 h-max">
+        <h3 class="font-bold text-sm mb-1">Pantry Staples</h3>
+        <p class="text-[10px] text-warm-muted mb-3">Checked items never land on the grocery list.</p>
+        <div class="flex gap-2 mb-3"><input id="p-new" placeholder="Add staple..." maxlength="40" class="flex-1 px-3 py-1.5 border border-warm-border rounded-lg text-xs bg-white"><button onclick="addPantry()" class="px-3 bg-emerald-600 text-white rounded-lg text-xs font-bold">Add</button></div>
+        <div id="pantry" class="space-y-2 max-h-60 overflow-y-auto"></div>
+        <h4 class="text-[10px] font-bold text-emerald-700 uppercase mt-4 mb-2 pt-3 border-t border-warm-border">Skipped this week</h4>
+        <ul id="skipped" class="text-[10px] text-warm-muted space-y-1 list-disc pl-4"></ul>
       </div>
     </div>
   </div>
 
-  <!-- ADD CHORE MODAL -->
-  <div id="modal-add-chore" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden" onclick="if(event.target === this) closeModals()">
-    <div class="bg-white border border-warm-border rounded-3xl max-w-sm w-full p-6 shadow-xl">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="font-display font-bold text-lg text-warm-text">Add Chore</h3>
-        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500 text-lg">❌</button>
-      </div>
-      <div class="space-y-4">
-        <div><label class="block text-xs font-bold mb-1">Chore Name</label><input type="text" id="input-chore-title" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs"></div>
-        <div>
-          <label class="block text-xs font-bold mb-1">Frequency</label>
-          <select id="input-chore-frequency" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs" onchange="document.getElementById('input-chore-days-container').style.display = this.value === 'weekly' ? 'block' : 'none'">
-            <option value="daily">Daily</option><option value="weekly">Weekly</option>
-          </select>
-        </div>
-        <div id="input-chore-days-container" style="display: none;">
-          <label class="block text-xs font-bold mb-1">Day</label>
-          <select id="input-chore-days" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs">
-            <option value="Monday">Monday</option><option value="Tuesday">Tuesday</option><option value="Wednesday">Wednesday</option><option value="Thursday">Thursday</option><option value="Friday">Friday</option><option value="Saturday">Saturday</option><option value="Sunday">Sunday</option>
-          </select>
-        </div>
-        <div>
-          <label class="block text-xs font-bold mb-2">Assignees</label>
-          <div class="flex gap-4">
-            <label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" id="input-chore-hanna" value="Hanna" class="rounded text-emerald-600 cursor-pointer" checked> Hanna</label>
-            <label class="flex items-center gap-2 text-xs cursor-pointer"><input type="checkbox" id="input-chore-ryan" value="Ryan" class="rounded text-emerald-600 cursor-pointer" checked> Ryan</label>
-          </div>
-        </div>
-      </div>
-      <div class="flex justify-end gap-2 mt-6">
-        <button onclick="closeModals()" class="px-4 py-2 bg-warm-subtle rounded-xl text-xs font-bold">Cancel</button>
-        <button onclick="saveChore()" class="px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-bold">Save Chore</button>
-      </div>
+  <div id="t-recipes" class="h-full hidden flex-col card rounded-3xl p-6 overflow-hidden">
+    <div class="flex items-center justify-between pb-5 border-b border-warm-border shrink-0">
+      <h2 class="font-display font-bold text-xl">Recipe Vault</h2>
+      <button onclick="openRecipe()" class="px-4 py-2 bg-rose-500 hover:bg-rose-600 text-white rounded-xl text-xs font-bold flex items-center gap-2"><i data-i="plus" data-s="14"></i> Add Recipe</button>
     </div>
+    <div id="vault" class="flex-1 overflow-y-auto py-4 grid grid-cols-3 lg:grid-cols-4 gap-4 content-start"></div>
   </div>
+</main>
 
-  <!-- ADD TASK MODAL -->
-  <div id="modal-add-task" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-4 z-50 hidden" onclick="if(event.target === this) closeModals()">
-    <div class="bg-white border border-warm-border rounded-3xl max-w-sm w-full p-6 shadow-xl">
-      <div class="flex justify-between items-center mb-4">
-        <h3 class="font-display font-bold text-lg text-warm-text">Add Task</h3>
-        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500 text-lg">❌</button>
-      </div>
-      <div class="space-y-4">
-        <div><label class="block text-xs font-bold mb-1">Task Description</label><input type="text" id="input-task-title" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs"></div>
-        <div>
-          <label class="block text-xs font-bold mb-2">Assign To</label>
-          <select id="input-task-assignee" class="w-full bg-warm-subtle border rounded-xl px-3 py-2 text-xs">
-            <option value="Unassigned">Unassigned</option><option value="Hanna">Hanna</option><option value="Ryan">Ryan</option>
-          </select>
-        </div>
-      </div>
-      <div class="flex justify-end gap-2 mt-6">
-        <button onclick="closeModals()" class="px-4 py-2 bg-warm-subtle rounded-xl text-xs font-bold">Cancel</button>
-        <button onclick="saveTask()" class="px-4 py-2 bg-purple-600 text-white rounded-xl text-xs font-bold">Save Task</button>
-      </div>
-    </div>
-  </div>
+<div id="m" class="fixed inset-0 bg-black/40 backdrop-blur-sm hidden items-center justify-center p-4 z-50" onclick="if(event.target===this)closeM()">
+  <div id="mc" class="bg-white border border-warm-border rounded-3xl w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto" role="dialog" aria-modal="true"></div>
+</div>
 
-  <!-- NATIVE GOOGLE CALENDAR EMBED MODAL (MONTH) -->
-  <div id="modal-calendar-embed" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-6 z-40 hidden" onclick="if(event.target === this) closeModals()">
-    <div class="bg-white border border-warm-border rounded-3xl w-full max-w-6xl h-[85vh] p-6 flex flex-col shadow-2xl relative">
-      <div class="flex justify-between items-center pb-4 border-b shrink-0">
-        <h3 class="font-display font-bold text-xl flex items-center gap-2">📅 Google Calendar</h3>
-        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500 bg-warm-subtle p-2 rounded-xl text-lg">❌</button>
-      </div>
-      <div class="flex-1 mt-4 rounded-xl overflow-hidden border border-warm-border relative bg-warm-bg">
-          <iframe id="google-calendar-modal-iframe" style="border: 0" width="100%" height="100%" frameborder="0" scrolling="yes"></iframe>
-      </div>
-    </div>
-  </div>
+<script>
+/* ---------- helpers ---------- */
+const $=id=>document.getElementById(id);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const safeUrl=u=>/^https?:\/\//i.test(u||'')?u:'';
+const I={ // Lucide-style line icons, inlined so nothing external can freeze the page
+home:'<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V12h6v10"/>',
+cart:'<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2 2h2l2.7 12.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L22 7H5"/>',
+book:'<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',
+sliders:'<path d="M4 8h16M4 16h16"/><circle cx="9" cy="8" r="2" fill="#fff"/><circle cx="15" cy="16" r="2" fill="#fff"/>',
+plus:'<path d="M5 12h14M12 5v14"/>',x:'<path d="M18 6 6 18M6 6l12 12"/>',
+refresh:'<path d="M3 12a9 9 0 0 1 15-6.7L21 8"/><path d="M21 3v5h-5"/><path d="M21 12a9 9 0 0 1-15 6.7L3 16"/><path d="M8 16H3v5"/>',
+trash:'<path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"/>',
+cal:'<rect width="18" height="18" x="3" y="4" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/>',
+utensils:'<path d="M3 2v7a2 2 0 0 0 2 2h4a2 2 0 0 0 2-2V2M7 2v20M21 15V2a5 5 0 0 0-5 5v6a2 2 0 0 0 2 2h3zm0 0v7"/>',
+check:'<path d="M22 11v1a10 10 0 1 1-6-9.1"/><path d="m9 11 3 3L22 4"/>',
+list:'<rect width="8" height="4" x="8" y="2" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M12 11h4M12 16h4M8 11h.01M8 16h.01"/>',
+edit:'<path d="M17 3a2.8 2.8 0 0 1 4 4L7.5 20.5 2 22l1.5-5.5z"/>',
+sun:'<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>',
+eye:'<path d="M2 12s3.5-7 10-7 10 7 10 7-3.5 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>',
+ban:'<circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/>'};
+const ic=(n,s=16)=>`<svg xmlns="http://www.w3.org/2000/svg" width="${s}" height="${s}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" class="inline-block shrink-0">${I[n]||''}</svg>`;
+const hydrate=()=>document.querySelectorAll('i[data-i]').forEach(e=>e.outerHTML=ic(e.dataset.i,+e.dataset.s||16));
+const load=(k,f)=>{try{const v=localStorage.getItem(k);return v?JSON.parse(v):f}catch{return f}};
+const cfg=k=>localStorage.getItem('cfg_'+k)||'';
 
-  <!-- MEAL PLANNER MODAL -->
-  <div id="modal-meal-planner" class="fixed inset-0 bg-black/40 backdrop-blur-sm flex items-center justify-center p-6 z-40 hidden" onclick="if(event.target === this) closeModals()">
-    <div class="bg-white border border-warm-border rounded-3xl max-w-5xl w-full h-[85vh] p-6 flex flex-col shadow-2xl">
-      <div class="flex justify-between items-center pb-4 border-b shrink-0">
-        <div class="flex items-center gap-3">
-            <div class="p-2 bg-amber-50 rounded-xl text-amber-700 text-lg">🍽️</div>
-            <div><h3 class="font-display font-bold text-xl">Meal Planner</h3></div>
-        </div>
-        <button onclick="closeModals()" class="text-warm-muted hover:text-rose-500 text-lg">❌</button>
-      </div>
-      <div class="flex-1 grid grid-cols-12 gap-4 mt-4 min-h-0">
-        <div class="col-span-9 overflow-y-auto pr-2" id="meal-planner-grid"></div>
-        <div class="col-span-3 bg-warm-subtle rounded-2xl p-4 overflow-y-auto border border-warm-border flex flex-col gap-2" id="meal-planner-vault"></div>
-      </div>
-    </div>
-  </div>
+/* ---------- state ---------- */
+const DAYS=['Monday','Tuesday','Wednesday','Thursday','Friday','Saturday','Sunday'],SLOTS=['breakfast','lunch','dinner'];
+let recipes=load('sl_recipes',[]),chores=load('sl_chores',[]),tasks=load('sl_tasks',[]),manual=load('sl_manual_groceries',[]),
+hidden=load('sl_del_groceries',[]),checked=load('sl_checked',[]),pushed=load('sl_pushed',[]),meta=load('sl_meta',{}),
+pantry=load('sl_pantry',{'Soy Sauce':true,'White Rice':true,'Olive Oil':true,'Salt':true,'Pepper':true,'Sugar':true,'Flour':true});
+let meals=load('sl_meals',null);
+if(!meals||!meals.Monday){meals={};DAYS.forEach(d=>meals[d]={breakfast:null,lunch:null,dinner:null})}
+let groceries=[],skipped=[],chFreq='daily',chWho='ALL',picked=null;
 
-  <!-- COOK MODE (RECIPE VIEW) MODAL -->
-  <div id="modal-cook-mode" class="fixed inset-0 bg-black/50 backdrop-blur-md flex items-center justify-center p-8 z-50 hidden" onclick="if(event.target === this) closeModals()">
-    <div class="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] overflow-y-auto p-8 relative shadow-2xl">
-      <div class="absolute top-6 right-6 flex gap-3">
-          <button id="cook-edit-btn" class="p-2 bg-warm-subtle rounded-xl text-warm-muted hover:text-blue-600 text-lg">✏️</button>
-          <button onclick="closeModals()" class="p-2 bg-warm-subtle rounded-xl text-warm-muted hover:text-rose-500 text-lg">❌</button>
-      </div>
-      <h2 id="cook-title" class="font-display font-bold text-3xl text-warm-text mb-2">Recipe</h2>
-      <a id="cook-link" href="#" target="_blank" class="text-xs text-blue-600 hover:underline mb-6 flex items-center gap-1 hidden">🔗 View Original Recipe</a>
-      <div class="grid grid-cols-3 gap-8 mt-6">
-        <div class="col-span-1 border-r border-warm-border pr-4">
-          <h4 class="font-bold text-sm text-warm-text mb-3 uppercase tracking-wider text-rose-600">Ingredients</h4>
-          <ul id="cook-ingredients" class="space-y-2 text-sm text-warm-text list-disc pl-4"></ul>
-        </div>
-        <div class="col-span-2">
-          <h4 class="font-bold text-sm text-warm-text mb-3 uppercase tracking-wider text-emerald-600">Instructions</h4>
-          <ol id="cook-instructions" class="space-y-4 list-decimal pl-5 text-warm-text text-sm leading-relaxed marker:font-bold marker:text-emerald-500"></ol>
-        </div>
-      </div>
-    </div>
-  </div>
+function save(){
+  const d={sl_recipes:recipes,sl_chores:chores,sl_tasks:tasks,sl_meals:meals,sl_pantry:pantry,sl_manual_groceries:manual,sl_del_groceries:hidden,sl_checked:checked,sl_pushed:pushed,sl_meta:meta};
+  try{for(const k in d)localStorage.setItem(k,JSON.stringify(d[k]))}catch(e){alert('Storage is full or blocked; changes may not be saved.')}
+  extract();renderAll();
+}
 
-  <!-- ================= JAVASCRIPT ================= -->
-  <script>
-    const GOOGLE_CALENDAR_EMBED = localStorage.getItem('cfg_g_embed') || '';
-    const TRELLO_API_KEY = localStorage.getItem('cfg_t_api') || '';
-    const TRELLO_TOKEN = localStorage.getItem('cfg_t_token') || '';
-    const TRELLO_GROCERY_LIST_ID = localStorage.getItem('cfg_t_groc_list') || '';
-    const TRELLO_TASKS_LIST_ID = localStorage.getItem('cfg_t_task_list') || '';
-    const GEMINI_API_KEY = localStorage.getItem('cfg_ai_api') || '';
+/* ---------- automatic daily / weekly reset ---------- */
+const dayName=()=>new Date().toLocaleDateString('en-US',{weekday:'long'});
+const dayKey=d=>d.toLocaleDateString('en-CA');
+const weekKey=d=>{const m=new Date(d);m.setDate(m.getDate()-(m.getDay()+6)%7);return dayKey(m)}; // weeks start Monday
+function autoReset(){
+  const n=new Date(),dk=dayKey(n),wk=weekKey(n);let ch=false;
+  if(meta.day!==dk){chores.forEach(c=>{if(c.frequency==='daily')c.done=false});meta.day=dk;ch=true}
+  if(meta.week!==wk){chores.forEach(c=>{if(c.frequency==='weekly')c.done=false});meta.week=wk;ch=true}
+  return ch;
+}
 
-    const DAYS_FULL = ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday', 'Sunday'];
-    const SLOTS = ['breakfast', 'lunch', 'dinner'];
+/* ---------- shell ---------- */
+function renderAll(){renderChores();renderTasks();renderToday();renderVault();renderGroceries();hydrate()}
+const BASE='px-4 py-2.5 rounded-xl text-xs font-bold transition-all flex items-center gap-2 ';
+function tab(t){
+  ['dashboard','grocery','recipes'].forEach(x=>{const e=$('t-'+x);e.classList.toggle('hidden',x!==t);e.classList.toggle('flex',x===t)});
+  document.querySelectorAll('[data-tab]').forEach(b=>b.className=BASE+(b.dataset.tab===t?'bg-emerald-600 text-white shadow-md':'bg-white border border-warm-border hover:bg-warm-subtle'));
+}
+function tick(){
+  const n=new Date();
+  $('clock').textContent=n.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+  $('date').textContent=n.toLocaleDateString(undefined,{weekday:'long',month:'short',day:'numeric'});
+  if(autoReset())save();
+}
+async function weather(){
+  try{const r=await fetch('https://api.open-meteo.com/v1/forecast?latitude=33.6846&longitude=-117.8265&current_weather=true&temperature_unit=fahrenheit');
+  $('temp').textContent=Math.round((await r.json()).current_weather.temperature)+'°F'}catch{}
+}
 
-    let todayDateObj = new Date();
-    let todayFullName = todayDateObj.toLocaleDateString('en-US', { weekday: 'long' });
-    if (!DAYS_FULL.includes(todayFullName)) todayFullName = 'Monday';
+/* ---------- modal ---------- */
+const mh=t=>`<div class="flex justify-between items-center mb-4"><h3 class="font-display font-bold text-lg">${t}</h3><button onclick="closeM()" aria-label="Close" class="text-warm-muted hover:text-rose-500">${ic('x',20)}</button></div>`;
+function openM(html,w='max-w-md'){$('mc').className=`bg-white border border-warm-border rounded-3xl w-full p-6 shadow-xl max-h-[90vh] overflow-y-auto ${w}`;$('mc').innerHTML=html;$('m').classList.remove('hidden');$('m').classList.add('flex');hydrate()}
+function closeM(){$('m').classList.add('hidden');$('m').classList.remove('flex');$('mc').innerHTML=''}
+const inp=(id,l,v='',t='text',ph='')=>`<div><label class="block text-xs font-bold mb-1" for="${id}">${l}</label><input id="${id}" type="${t}" value="${esc(v)}" placeholder="${esc(ph)}" autocomplete="off" class="w-full bg-warm-subtle border border-warm-border rounded-xl px-3 py-2 text-xs"></div>`;
+const area=(id,l,v='')=>`<div><label class="block text-xs font-bold mb-1" for="${id}">${l}</label><textarea id="${id}" rows="4" class="w-full bg-warm-subtle border border-warm-border rounded-xl px-3 py-2 text-xs">${esc(v)}</textarea></div>`;
+const B=(c,f,t)=>`<button onclick="${f}" class="px-4 py-2 rounded-xl text-xs font-bold ${c}">${t}</button>`;
+const CANCEL=B('bg-warm-subtle','closeM()','Cancel');
 
-    function safeJSONParse(key, fallback) { 
-        try { const val = localStorage.getItem(key); return val ? JSON.parse(val) : fallback; } 
-        catch(e) { return fallback; } 
-    }
+/* ---------- settings (nothing is hardcoded; values live only in this device's storage) ---------- */
+function openSettings(){
+  const sec=(id,l,k)=>inp(id,l,'','password',cfg(k)?'Saved. Leave blank to keep.':'');
+  openM(mh('Settings')+`<div class="space-y-3">
+    ${inp('s-cal','Google Calendar embed link',cfg('g_embed'),'text','https://calendar.google.com/calendar/embed?src=...')}
+    <hr class="border-warm-border">
+    ${sec('s-tk','Trello API key','t_api')}${sec('s-tt','Trello token','t_token')}
+    ${inp('s-gl','Trello grocery list ID',cfg('t_groc_list'))}${inp('s-tl','Trello tasks list ID',cfg('t_task_list'))}
+    <p class="text-[10px] text-warm-muted">Keys are stored only in this browser, never in the page's code. Use a Trello token with an expiration.</p></div>
+    <div class="flex justify-between mt-6">${B('bg-rose-50 text-rose-600','wipeKeys()','Clear saved keys')}<div class="flex gap-2">${CANCEL}${B('bg-emerald-600 text-white','saveSettings()','Save')}</div></div>`);
+}
+function saveSettings(){
+  const put=(k,id)=>{const v=$(id).value.trim();if(v)localStorage.setItem('cfg_'+k,v)};
+  put('t_api','s-tk');put('t_token','s-tt');
+  localStorage.setItem('cfg_t_groc_list',$('s-gl').value.trim());localStorage.setItem('cfg_t_task_list',$('s-tl').value.trim());
+  const c=$('s-cal').value.trim();
+  if(c&&!calUrl('MONTH',c)){return alert('That does not look like a Google Calendar embed link (it should start with https://calendar.google.com/calendar/embed).')}
+  localStorage.setItem('cfg_g_embed',c);closeM();setupCal();
+}
+function wipeKeys(){if(confirm('Remove Trello key and token from this device?')){['t_api','t_token'].forEach(k=>localStorage.removeItem('cfg_'+k));closeM()}}
 
-    let recipes = safeJSONParse('sl_recipes', []);
-    let chores = safeJSONParse('sl_chores', []);
-    let tasks = safeJSONParse('sl_tasks', []);
-    let manualGroceries = safeJSONParse('sl_manual_groceries', []);
-    let deletedGroceries = safeJSONParse('sl_del_groceries', []);
-    let pantry = safeJSONParse('sl_pantry', { 'Soy Sauce': true, 'White Rice': true, 'Olive Oil': true, 'Salt': true });
-    
-    function generateEmptyMeals() { let m = {}; DAYS_FULL.forEach(d => m[d] = { breakfast: null, lunch: null, dinner: null }); return m; }
-    let plannedMeals = safeJSONParse('sl_meals', null);
-    if (!plannedMeals || !plannedMeals['Monday']) plannedMeals = generateEmptyMeals();
+/* ---------- calendar ---------- */
+function calUrl(mode,raw=cfg('g_embed')){
+  const m=raw.match(/src="([^"]+)"/);if(m)raw=m[1];
+  try{const u=new URL(raw.replace(/&amp;/g,'&'));if(u.origin!=='https://calendar.google.com'||!u.pathname.startsWith('/calendar/embed'))return'';
+  u.searchParams.set('mode',mode);u.searchParams.set('ctz',Intl.DateTimeFormat().resolvedOptions().timeZone);return u.href}catch{return''}
+}
+function setupCal(){
+  const f=$('cal-frame'),u=calUrl('AGENDA');
+  if(u){f.src=u+'&showTitle=0&showNav=0&showDate=0&showPrint=0&showTabs=0&showCalendars=0&showTz=0';f.classList.remove('hidden');$('cal-empty').classList.add('hidden')}
+  else{f.removeAttribute('src');f.classList.add('hidden');$('cal-empty').classList.remove('hidden')}
+}
+function openCal(){
+  const u=calUrl('MONTH');if(!u)return alert('Add your Google Calendar embed link in Settings first.');
+  openM(`<div class="flex flex-col h-full">${mh('Calendar')}<iframe title="Month calendar" src="${esc(u)}" class="flex-1 rounded-xl border border-warm-border" style="border:0" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe></div>`,'max-w-6xl h-[85vh]');
+}
 
-    let generatedGroceries = [];
-    let pantrySkipped = [];
-    let activeChoreFilter = 'ALL';
-    let activeChoreFrequency = 'daily';
+/* ---------- chores ---------- */
+function renderChores(){
+  const SEG='px-3 py-1 rounded-lg text-xs font-bold ';
+  document.querySelectorAll('[data-freq]').forEach(b=>b.className=SEG+(b.dataset.freq===chFreq?'bg-white shadow-sm':'text-warm-muted'));
+  document.querySelectorAll('[data-who]').forEach(b=>b.className='px-3 py-1 rounded-xl text-xs font-bold '+(b.dataset.who===chWho?'bg-emerald-600 text-white':'border border-warm-border bg-white text-warm-muted'));
+  const today=dayName();
+  let l=chores.filter(c=>chFreq==='daily'?(c.frequency==='daily'||c.days.includes(today)):c.frequency==='weekly');
+  if(chWho!=='ALL')l=l.filter(c=>c.assignees.includes(chWho));
+  l.sort((a,b)=>a.done-b.done);
+  $('chores').innerHTML=l.length?l.map(c=>`<div class="p-3 rounded-2xl bg-white border border-warm-border flex justify-between items-center ${c.done?'opacity-50':''}">
+    <label class="flex items-center gap-3 flex-1 cursor-pointer"><input type="checkbox" ${c.done?'checked':''} onchange="toggleChore('${c.id}')" class="w-6 h-6 rounded text-emerald-600 focus:ring-0">
+    <span class="text-sm font-bold ${c.done?'line-through text-warm-muted':''}">${esc(c.text)}${c.frequency==='weekly'?`<span class="ml-2 text-[10px] font-semibold text-warm-muted">${esc(c.days[0])}</span>`:''}</span></label>
+    <div class="flex items-center gap-1.5">${c.assignees.map(a=>`<span class="text-[10px] font-bold px-2 py-1 rounded-lg border ${a==='Ryan'?'bg-blue-50 text-blue-700':'bg-emerald-50 text-emerald-700'}">${esc(a)}</span>`).join('')}
+    <button onclick="delChore('${c.id}')" aria-label="Delete chore" class="ml-1 text-warm-muted hover:text-rose-500">${ic('trash',15)}</button></div></div>`).join(''):'<p class="text-xs text-warm-muted p-2 text-center">No chores match this view.</p>';
+}
+function toggleChore(id){const c=chores.find(x=>x.id===id);if(c){c.done=!c.done;save()}}
+function delChore(id){if(confirm('Delete this chore?')){chores=chores.filter(x=>x.id!==id);save()}}
+function openChore(){
+  openM(mh('Add Chore')+`<div class="space-y-4">${inp('c-t','Chore name','','text')}
+    <div><label class="block text-xs font-bold mb-1" for="c-f">Frequency</label><select id="c-f" onchange="$('c-dw').style.display=this.value==='weekly'?'block':'none'" class="w-full bg-warm-subtle border border-warm-border rounded-xl px-3 py-2 text-xs"><option value="daily">Daily</option><option value="weekly">Weekly</option></select></div>
+    <div id="c-dw" style="display:none"><label class="block text-xs font-bold mb-1" for="c-d">Day</label><select id="c-d" class="w-full bg-warm-subtle border border-warm-border rounded-xl px-3 py-2 text-xs">${DAYS.map(d=>`<option>${d}</option>`).join('')}</select></div>
+    <div class="flex gap-4 text-xs"><label class="flex items-center gap-2"><input type="checkbox" id="c-h" checked class="rounded text-emerald-600"> Hanna</label><label class="flex items-center gap-2"><input type="checkbox" id="c-r" checked class="rounded text-emerald-600"> Ryan</label></div></div>
+    <div class="flex justify-end gap-2 mt-6">${CANCEL}${B('bg-emerald-600 text-white','saveChore()','Save Chore')}</div>`);
+}
+function saveChore(){
+  const text=$('c-t').value.trim().slice(0,80),f=$('c-f').value,a=[];if($('c-h').checked)a.push('Hanna');if($('c-r').checked)a.push('Ryan');
+  if(!text||!a.length)return;
+  chores.push({id:'c'+Date.now(),text,assignees:a,frequency:f,days:f==='weekly'?[$('c-d').value]:[],done:false});save();closeM();
+}
 
-    window.onload = function() {
-      try {
-          startClock();
-          fetchWeather();
-          extractGroceries();
-          renderAll();
-          setupCalendars();
-      } catch (err) {
-          console.error("Initialization Error:", err);
-      }
-    };
+/* ---------- Trello ---------- */
+async function trello(listId,names,btn){
+  const key=cfg('t_api'),token=cfg('t_token');
+  if(!key||!token||!listId){alert('Add your Trello key, token and list ID in Settings first.');return false}
+  const orig=btn.innerHTML;btn.textContent='Working...';let ok=false;
+  try{for(const name of names){const r=await fetch('https://api.trello.com/1/cards?'+new URLSearchParams({idList:listId,key,token,name}),{method:'POST'});if(!r.ok)throw new Error('Trello said '+r.status)}ok=true;btn.textContent='Done'}
+  catch(e){alert('Sync failed: '+e.message);btn.textContent='Failed'}
+  setTimeout(()=>{btn.innerHTML=orig;hydrate()},2000);return ok;
+}
 
-    function saveState() {
-      localStorage.setItem('sl_recipes', JSON.stringify(recipes));
-      localStorage.setItem('sl_chores', JSON.stringify(chores));
-      localStorage.setItem('sl_tasks', JSON.stringify(tasks));
-      localStorage.setItem('sl_meals', JSON.stringify(plannedMeals));
-      localStorage.setItem('sl_pantry', JSON.stringify(pantry));
-      localStorage.setItem('sl_manual_groceries', JSON.stringify(manualGroceries));
-      localStorage.setItem('sl_del_groceries', JSON.stringify(deletedGroceries));
-      extractGroceries();
-      renderAll();
-    }
+/* ---------- tasks ---------- */
+function renderTasks(){
+  $('tasks').innerHTML=tasks.length?tasks.map(t=>`<div class="p-3 rounded-2xl bg-white border border-warm-border flex items-center gap-2 ${t.done?'opacity-50':''}">
+    <label class="flex items-center gap-3 flex-1 cursor-pointer"><input type="checkbox" ${t.done?'checked':''} onchange="toggleTask('${t.id}')" class="w-6 h-6 rounded text-purple-600 focus:ring-0"><span class="text-sm font-bold ${t.done?'line-through text-warm-muted':''}">${esc(t.text)}</span></label>
+    ${t.assignee&&t.assignee!=='Unassigned'?`<span class="text-[10px] font-bold px-2 py-1 rounded-lg border bg-purple-50 text-purple-700">${esc(t.assignee)}</span>`:''}
+    <button onclick="delTask('${t.id}')" aria-label="Delete task" class="text-warm-muted hover:text-rose-500">${ic('trash',15)}</button></div>`).join(''):'<p class="text-xs text-warm-muted p-2 text-center">No active tasks.</p>';
+}
+function toggleTask(id){const t=tasks.find(x=>x.id===id);if(t){t.done=!t.done;save()}}
+function delTask(id){tasks=tasks.filter(x=>x.id!==id);save()}
+function openTask(){
+  openM(mh('Add Task')+`<div class="space-y-4">${inp('k-t','Task description')}<div><label class="block text-xs font-bold mb-1" for="k-a">Assign to</label><select id="k-a" class="w-full bg-warm-subtle border border-warm-border rounded-xl px-3 py-2 text-xs"><option>Unassigned</option><option>Hanna</option><option>Ryan</option></select></div></div>
+  <div class="flex justify-end gap-2 mt-6">${CANCEL}${B('bg-purple-600 text-white','saveTask()','Save Task')}</div>`);
+}
+function saveTask(){const text=$('k-t').value.trim().slice(0,120);if(!text)return;tasks.push({id:'t'+Date.now(),text,assignee:$('k-a').value,done:false});save();closeM()}
+async function syncTasks(b){
+  const todo=tasks.filter(t=>!t.done&&!t.synced);if(!todo.length)return alert('Nothing new to sync.');
+  if(await trello(cfg('t_task_list'),todo.map(t=>t.assignee&&t.assignee!=='Unassigned'?`[${t.assignee}] ${t.text}`:t.text),b)){todo.forEach(t=>t.synced=true);save()}
+}
 
-    function renderAll() {
-      renderChores();
-      renderTasks();
-      renderTodayMeals();
-      renderRecipeVault();
-      renderGroceriesTab();
-    }
+/* ---------- meals ---------- */
+const recOf=m=>m?recipes.find(r=>r.id===m.recipeId):null;
+function renderToday(){
+  const d=dayName();
+  $('today-meals').innerHTML=SLOTS.map(s=>{const r=recOf(meals[d]?.[s]);
+    return `<div class="flex items-center justify-between p-3 rounded-xl bg-white border border-amber-200 shadow-sm cursor-pointer hover:border-amber-400" onclick="${r?`openCook('${r.id}')`:'openPlanner()'}">
+    <div><span class="block text-[9px] uppercase font-bold text-amber-600">${s}</span><span class="text-sm font-bold">${r?esc(r.title):'<span class="text-warm-muted italic font-normal">Unplanned</span>'}</span></div>
+    <span class="text-amber-500">${ic(r?'utensils':'plus',18)}</span></div>`}).join('');
+}
+function openPlanner(){
+  openM(`<div class="flex flex-col h-full">${mh('Meal Planner')}<p class="text-[11px] text-warm-muted mb-2">Drag a recipe into a slot, or tap a recipe and then tap a slot (works best on iPad).</p>
+  <div class="flex-1 grid grid-cols-12 gap-4 min-h-0"><div class="col-span-9 overflow-y-auto pr-2" id="pg"></div><div class="col-span-3 bg-warm-subtle rounded-2xl p-3 overflow-y-auto border border-warm-border flex flex-col gap-2" id="pv"></div></div></div>`,'max-w-5xl h-[85vh]');
+  drawPlanner();
+}
+function drawPlanner(){
+  if(!$('pg'))return;
+  $('pg').innerHTML=DAYS.map(d=>`<div class="mb-3 bg-white border border-warm-border rounded-2xl p-3"><h4 class="font-bold text-sm uppercase mb-2">${d}</h4><div class="grid grid-cols-3 gap-3">${SLOTS.map(s=>{const r=recOf(meals[d]?.[s]);
+    return `<div class="border-2 border-dashed border-warm-border rounded-xl p-2 min-h-[70px] flex flex-col justify-center items-center bg-warm-subtle/50 ${picked?'border-amber-300':''}" onclick="slotTap('${d}','${s}')" ondragover="event.preventDefault();this.classList.add('drag-over-active')" ondragleave="this.classList.remove('drag-over-active')" ondrop="drop(event,'${d}','${s}')">
+    <span class="text-[9px] font-bold uppercase text-warm-muted">${s}</span>
+    ${r?`<div class="drag bg-amber-50 text-amber-900 border border-amber-200 rounded p-1 text-xs w-full mt-1 text-center font-semibold flex items-center justify-between gap-1" draggable="true" ondragstart="event.dataTransfer.setData('text/plain','m|${d}|${s}|${r.id}')"><span class="truncate">${esc(r.title)}</span><button onclick="event.stopPropagation();setMeal('${d}','${s}',null)" aria-label="Remove meal">${ic('x',12)}</button></div>`:'<span class="text-[10px] italic text-warm-muted/60 mt-1">Drop here</span>'}</div>`}).join('')}</div></div>`).join('');
+  $('pv').innerHTML=recipes.length?recipes.map(r=>`<div class="drag p-3 rounded-xl bg-white border-2 ${picked===r.id?'border-amber-500':'border-warm-border'} shadow-sm flex justify-between items-center gap-2" draggable="true" onclick="picked=picked==='${r.id}'?null:'${r.id}';drawPlanner()" ondragstart="event.dataTransfer.setData('text/plain','r|${r.id}')"><span class="font-bold text-sm truncate">${esc(r.title)}</span><button onclick="event.stopPropagation();openCook('${r.id}')" aria-label="View recipe" class="text-warm-muted hover:text-blue-600">${ic('eye',16)}</button></div>`).join(''):'<p class="text-xs text-warm-muted">Add recipes in the Vault first.</p>';
+}
+function setMeal(d,s,id){meals[d][s]=id?{recipeId:id}:null;save();drawPlanner()}
+function slotTap(d,s){if(picked){setMeal(d,s,picked)}}
+function drop(e,d,s){
+  e.preventDefault();e.currentTarget.classList.remove('drag-over-active');
+  const p=e.dataTransfer.getData('text/plain').split('|');let id;
+  if(p[0]==='m'){meals[p[1]][p[2]]=null;id=p[3]}else if(p[0]==='r')id=p[1];else return;
+  setMeal(d,s,id);
+}
 
-    function startClock() {
-      setInterval(() => {
-        const now = new Date();
-        document.getElementById('live-time').innerHTML = now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
-        document.getElementById('live-date').innerText = now.toLocaleDateString(undefined, { weekday: 'long', month: 'short', day: 'numeric' });
-      }, 1000);
-    }
-    
-    async function fetchWeather() {
-      try {
-        const res = await fetch('https://api.open-meteo.com/v1/forecast?latitude=33.6846&longitude=-117.8265&current_weather=true');
-        const data = await res.json();
-        const tempF = Math.round((data.current_weather.temperature * 9/5) + 32);
-        document.getElementById('weather-temp').innerText = `${tempF}°F`;
-      } catch (e) { document.getElementById('weather-temp').innerText = '72°F'; }
-    }
+/* ---------- groceries (auto-built from the meal plan) ---------- */
+const pantryHit=n=>Object.keys(pantry).find(p=>pantry[p]&&new RegExp('\\b'+p.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+'\\b','i').test(n));
+function cat(n){const l=n.toLowerCase(),has=w=>w.some(x=>l.includes(x));
+  if(has(['chicken','beef','pork','salmon','shrimp','turkey','bacon','tofu','sausage']))return'Meat & Proteins';
+  if(has(['onion','garlic','spinach','apple','lettuce','tomato','pepper','carrot','potato','lemon','lime','basil','cilantro','broccoli','mushroom','ginger']))return'Produce';
+  if(has(['milk','cheese','butter','egg','yogurt','cream']))return'Dairy';return'Pantry / General'}
+function extract(){
+  const seen={};skipped=[];
+  DAYS.forEach(d=>SLOTS.forEach(s=>{(recOf(meals[d]?.[s])?.ingredients||[]).forEach(n=>{
+    if(hidden.includes(n)||seen[n])return;const p=pantryHit(n);if(p){skipped.push(`${n} (${p})`);return}
+    seen[n]={name:n,category:cat(n),checked:checked.includes(n)}})}));
+  groceries=Object.values(seen);
+}
+function renderGroceries(){
+  $('pantry').innerHTML=Object.keys(pantry).map(p=>`<div class="flex items-center gap-2 p-2 bg-white rounded-xl border border-warm-border"><label class="flex items-center gap-3 flex-1 cursor-pointer"><input type="checkbox" ${pantry[p]?'checked':''} data-n="${esc(p)}" onchange="pantry[this.dataset.n]=this.checked;save()" class="w-4 h-4 rounded text-emerald-600"><span class="text-xs font-bold">${esc(p)}</span></label><button data-n="${esc(p)}" onclick="delete pantry[this.dataset.n];save()" aria-label="Remove" class="text-warm-muted hover:text-rose-500">${ic('x',14)}</button></div>`).join('');
+  $('skipped').innerHTML=skipped.length?skipped.map(s=>`<li class="line-through">${esc(s)}</li>`).join(''):'<li>None yet.</li>';
+  const cats={};groceries.forEach(g=>(cats[g.category]=cats[g.category]||[]).push(g));
+  if(manual.length)cats['Manual Additions']=manual.map(m=>({name:m.text,manualId:m.id,checked:m.checked}));
+  const ks=Object.keys(cats).sort();
+  $('g-cats').innerHTML=ks.length?ks.map(c=>`<div class="bg-white border border-warm-border rounded-2xl p-4 h-max"><h4 class="font-bold text-xs uppercase text-amber-700 mb-2">${esc(c)}</h4>${cats[c].map(i=>`<div class="flex justify-between items-center py-2 border-b border-warm-subtle last:border-0">
+    <label class="flex items-center gap-3 flex-1 cursor-pointer"><input type="checkbox" class="w-5 h-5 rounded text-amber-600" ${i.checked?'checked':''} ${i.manualId?`onchange="toggleManual('${i.manualId}')"`:`data-n="${esc(i.name)}" onchange="toggleAuto(this.dataset.n)"`}><span class="text-xs font-semibold ${i.checked?'line-through text-warm-muted':''}">${esc(i.name)}</span></label>
+    ${i.manualId?`<button onclick="manual=manual.filter(x=>x.id!=='${i.manualId}');save()" aria-label="Delete" class="text-warm-muted hover:text-rose-500">${ic('trash',15)}</button>`:`<button data-n="${esc(i.name)}" onclick="hidden.push(this.dataset.n);save()" aria-label="Hide item" class="text-warm-muted hover:text-rose-500">${ic('ban',15)}</button>`}</div>`).join('')}</div>`).join(''):'<p class="text-sm text-warm-muted col-span-2">Plan meals to generate your grocery list.</p>';
+}
+function toggleAuto(n){checked=checked.includes(n)?checked.filter(x=>x!==n):[...checked,n];save()}
+function toggleManual(id){const m=manual.find(x=>x.id===id);if(m){m.checked=!m.checked;save()}}
+function addManual(){const v=$('g-new').value.trim();if(v){manual.push({id:'m'+Date.now(),text:v,checked:false});$('g-new').value='';save()}}
+function addPantry(){const v=$('p-new').value.trim();if(v){pantry[v]=true;$('p-new').value='';save()}}
+async function pushGroceries(b){
+  const items=[...groceries.filter(g=>!g.checked).map(g=>({k:g.name,n:`[${g.category}] ${g.name}`})),...manual.filter(m=>!m.checked).map(m=>({k:m.text,n:`[Custom] ${m.text}`}))].filter(i=>!pushed.includes(i.k));
+  if(!items.length)return alert('Nothing new to push.');
+  if(await trello(cfg('t_groc_list'),items.map(i=>i.n),b)){pushed.push(...items.map(i=>i.k));save()}
+}
 
-    function switchTab(tab) {
-      ['dashboard', 'grocery', 'recipes'].forEach(t => {
-        const el = document.getElementById(`tab-${t}`);
-        const btn = document.getElementById(`nav-btn-${t}`);
-        if (el && btn) {
-          el.classList.toggle('hidden', t !== tab); el.classList.toggle('flex', t === tab);
-          btn.className = t === tab ? "px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-emerald-600 text-white shadow-md flex items-center gap-2" : "px-4 py-2.5 rounded-xl text-xs font-bold transition-all bg-white border border-warm-border text-warm-text hover:bg-warm-subtle flex items-center gap-2";
-        }
-      });
-    }
+/* ---------- recipes ---------- */
+function renderVault(){
+  $('vault').innerHTML=recipes.length?recipes.map(r=>`<div class="card rounded-2xl p-4 cursor-pointer hover:border-amber-400 group" onclick="openCook('${r.id}')"><div class="flex justify-between items-start mb-3"><span class="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center">${ic('utensils',18)}</span>
+  <button onclick="event.stopPropagation();openRecipe('${r.id}')" aria-label="Edit recipe" class="text-warm-muted hover:text-blue-600 p-1">${ic('edit',16)}</button></div><h3 class="font-bold text-base leading-tight">${esc(r.title)}</h3></div>`).join(''):'<p class="text-sm text-warm-muted col-span-full">No recipes yet. Add your first one.</p>';
+}
+function openCook(id){
+  const r=recipes.find(x=>x.id===id);if(!r)return;const l=safeUrl(r.link);
+  openM(`<div class="flex justify-end gap-2 mb-2"><button onclick="openRecipe('${r.id}')" aria-label="Edit" class="p-2 bg-warm-subtle rounded-xl text-warm-muted hover:text-blue-600">${ic('edit',18)}</button><button onclick="closeM()" aria-label="Close" class="p-2 bg-warm-subtle rounded-xl text-warm-muted hover:text-rose-500">${ic('x',18)}</button></div>
+  <h2 class="font-display font-bold text-3xl mb-2">${esc(r.title)}</h2>${l?`<a href="${esc(l)}" target="_blank" rel="noopener noreferrer" class="text-xs text-blue-600 hover:underline">View original recipe</a>`:''}
+  <div class="grid grid-cols-3 gap-8 mt-6"><div class="border-r border-warm-border pr-4"><h4 class="font-bold text-sm mb-3 uppercase tracking-wider text-rose-600">Ingredients</h4><ul class="space-y-2 text-sm list-disc pl-4">${(r.ingredients||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ul></div>
+  <div class="col-span-2"><h4 class="font-bold text-sm mb-3 uppercase tracking-wider text-emerald-600">Instructions</h4><ol class="space-y-4 list-decimal pl-5 text-sm leading-relaxed marker:font-bold marker:text-emerald-500">${(r.instructions||[]).map(i=>`<li>${esc(i)}</li>`).join('')}</ol></div></div>`,'max-w-3xl');
+}
+function openRecipe(id){
+  const r=recipes.find(x=>x.id===id)||{title:'',link:'',ingredients:[],instructions:[]};
+  const pasteBox=id?'':`<div class="mb-4 p-4 bg-purple-50 border border-purple-200 rounded-xl"><label class="block text-[10px] font-bold uppercase text-purple-700 mb-1" for="r-p">Quick paste</label>
+  <div class="flex gap-2"><textarea id="r-p" rows="3" placeholder="Paste the TITLE / LINK / INGREDIENTS / INSTRUCTIONS block here" class="flex-1 bg-white border border-purple-200 rounded-lg px-3 py-2 text-xs resize-none"></textarea>
+  <button onclick="fillFromPaste()" class="px-3 py-2 bg-purple-600 hover:bg-purple-700 text-white rounded-lg text-xs font-bold self-center">Fill in</button></div></div>`;
+  openM(mh(id?'Edit Recipe':'Add Recipe')+pasteBox+`<div class="space-y-4"><input type="hidden" id="r-id" value="${esc(id||'')}">${inp('r-t','Recipe title',r.title)}${inp('r-l','Recipe link (optional)',r.link||'','text','https://...')}
+  ${area('r-i','Ingredients (one per line)',(r.ingredients||[]).join('\n'))}${area('r-s','Instructions (one step per line)',(r.instructions||[]).join('\n'))}</div>
+  <div class="flex justify-between mt-6">${id?B('bg-rose-50 text-rose-600','delRecipe()','Delete'):'<span></span>'}<div class="flex gap-2">${CANCEL}${B('bg-rose-500 text-white','saveRecipe()','Save Recipe')}</div></div>`,'max-w-lg');
+}
+function fillFromPaste(){
+  const raw=$('r-p').value;if(!raw.trim())return alert('Paste a recipe block first.');
+  let sec='',title='',link='';const ing=[],ins=[];
+  raw.split('\n').forEach(line=>{
+    const s=line.replace(/\*\*/g,'').trim();if(!s)return;
+    const m=s.match(/^(TITLE|LINK|INGREDIENTS|INSTRUCTIONS)\s*:\s*(.*)$/i);
+    if(m){sec=m[1].toUpperCase();const v=m[2].trim();
+      if(sec==='TITLE')title=v;else if(sec==='LINK')link=v;else if(v)(sec==='INGREDIENTS'?ing:ins).push(v);return}
+    const c=s.replace(/^([-*•]|\d+[.)])\s+/,'');
+    if(sec==='INGREDIENTS')ing.push(c);else if(sec==='INSTRUCTIONS')ins.push(c);
+  });
+  if(!title&&!ing.length)return alert("I couldn't find TITLE: or INGREDIENTS: in what you pasted.");
+  if(title)$('r-t').value=title;
+  if(link)$('r-l').value=link;
+  $('r-i').value=ing.join('\n');$('r-s').value=ins.join('\n');$('r-p').value='';
+}
+function saveRecipe(){
+  const id=$('r-id').value,title=$('r-t').value.trim(),link=safeUrl($('r-l').value.trim()),lines=v=>v.split('\n').map(x=>x.trim()).filter(Boolean);
+  const ingredients=lines($('r-i').value),instructions=lines($('r-s').value);
+  if(!title||!ingredients.length)return alert('Title and ingredients are required.');
+  if(id){const i=recipes.findIndex(x=>x.id===id);if(i>-1)recipes[i]={id,title,link,ingredients,instructions}}else recipes.push({id:'r'+Date.now(),title,link,ingredients,instructions});
+  save();closeM();
+}
+function delRecipe(){
+  if(!confirm('Delete this recipe?'))return;const id=$('r-id').value;recipes=recipes.filter(r=>r.id!==id);
+  DAYS.forEach(d=>SLOTS.forEach(s=>{if(meals[d][s]?.recipeId===id)meals[d][s]=null}));save();closeM();
+}
 
-    function closeModals() { 
-        document.querySelectorAll('[id^="modal-"]').forEach(m => m.classList.add('hidden')); 
-    }
-    
-    function openSettingsModal() {
-      document.getElementById('set-g-embed').value = GOOGLE_CALENDAR_EMBED;
-      document.getElementById('set-t-api').value = TRELLO_API_KEY;
-      document.getElementById('set-t-token').value = TRELLO_TOKEN;
-      document.getElementById('set-t-groc-list').value = TRELLO_GROCERY_LIST_ID;
-      document.getElementById('set-t-task-list').value = TRELLO_TASKS_LIST_ID;
-      document.getElementById('set-ai-api').value = GEMINI_API_KEY;
-      document.getElementById('modal-settings').classList.remove('hidden');
-    }
-
-    function saveSettings() {
-      localStorage.setItem('cfg_g_embed', document.getElementById('set-g-embed').value.trim());
-      localStorage.setItem('cfg_t_api', document.getElementById('set-t-api').value.trim());
-      localStorage.setItem('cfg_t_token', document.getElementById('set-t-token').value.trim());
-      localStorage.setItem('cfg_t_groc_list', document.getElementById('set-t-groc-list').value.trim());
-      localStorage.setItem('cfg_t_task_list', document.getElementById('set-t-task-list').value.trim());
-      localStorage.setItem('cfg_ai_api', document.getElementById('set-ai-api').value.trim());
-      window.location.reload();
-    }
-
-    function setupCalendars() {
-        const dashboardFrame = document.getElementById('dashboard-calendar-iframe');
-        const dashboardFallback = document.getElementById('dashboard-calendar-fallback');
-        const modalFrame = document.getElementById('google-calendar-modal-iframe');
-        
-        if (GOOGLE_CALENDAR_EMBED) {
-            let srcLink = GOOGLE_CALENDAR_EMBED;
-            if (srcLink.includes('iframe')) {
-                const match = srcLink.match(/src="([^"]+)"/);
-                if (match) srcLink = match[1];
-            }
-            dashboardFrame.src = srcLink + "&mode=AGENDA&showTitle=0&showNav=0&showDate=0&showPrint=0&showTabs=0&showCalendars=0";
-            dashboardFrame.classList.remove('hidden');
-            dashboardFallback.classList.add('hidden');
-            modalFrame.src = srcLink;
-        } else {
-            dashboardFrame.classList.add('hidden');
-            dashboardFallback.classList.remove('hidden');
-        }
-    }
-
-    function openCalendarEmbedModal() {
-      if (!GOOGLE_CALENDAR_EMBED) { 
-          alert("Please click the Gear Icon and add your Google Calendar Embed URL in Settings first."); 
-          return; 
-      }
-      document.getElementById('modal-calendar-embed').classList.remove('hidden');
-    }
-
-    function setChoreFrequency(freq) { activeChoreFrequency = freq; renderChores(); }
-    function setChoreFilter(filter) { activeChoreFilter = filter; renderChores(); }
-
-    function renderChores() {
-      const container = document.getElementById('chores-main-container');
-      if(!container) return; container.innerHTML = '';
-      ['daily', 'weekly'].forEach(f => {
-        const el = document.getElementById(`freq-btn-${f}`);
-        if(el) el.className = f === activeChoreFrequency ? "bg-white shadow-sm text-warm-text px-3 py-1 rounded-lg text-xs font-bold transition-all" : "text-warm-muted hover:text-warm-text px-3 py-1 rounded-lg text-xs font-bold transition-all";
-      });
-      ['ALL', 'Hanna', 'Ryan'].forEach(a => {
-        const el = document.getElementById(`filter-btn-${a}`);
-        if(el) el.className = a === activeChoreFilter ? "px-3 py-1 rounded-xl text-xs font-bold bg-emerald-600 text-white shadow-xs" : "px-3 py-1 rounded-xl text-xs font-bold border border-warm-border bg-white text-warm-muted";
-      });
-
-      let filtered = chores.filter(c => {
-        if (activeChoreFrequency === 'daily') return c.frequency === 'daily' || (c.frequency === 'weekly' && c.days.includes(todayFullName));
-        return c.frequency === 'weekly';
-      });
-      if (activeChoreFilter !== 'ALL') filtered = filtered.filter(c => c.assignees.includes(activeChoreFilter));
-      filtered.sort((a, b) => (a.done === b.done) ? 0 : a.done ? 1 : -1);
-
-      if (filtered.length === 0) { container.innerHTML = `<p class="text-xs text-warm-muted p-2 text-center">No chores match this view.</p>`; return; }
-      filtered.forEach(item => {
-        const card = document.createElement('div');
-        card.className = `p-3 rounded-2xl bg-white border border-warm-border flex justify-between items-center ${item.done ? 'opacity-50' : 'shadow-xs'}`;
-        card.innerHTML = `
-          <label class="flex items-center gap-3 flex-1 cursor-pointer">
-            <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleChore('${item.id}')" class="w-5 h-5 rounded text-emerald-600 focus:ring-0 cursor-pointer">
-            <span class="text-sm font-bold ${item.done ? 'line-through text-warm-muted' : 'text-warm-text'}">${item.text}</span>
-          </label>
-          <div class="flex items-center gap-1.5 shrink-0">
-            ${item.assignees.map(a => `<span class="text-[10px] font-bold px-2 py-1 rounded-lg border ${a==='Ryan'?'bg-blue-50 text-blue-700':'bg-emerald-50 text-emerald-700'}">${a}</span>`).join('')}
-          </div>
-        `;
-        container.appendChild(card);
-      });
-    }
-    
-    function toggleChore(id) { const item = chores.find(c => c.id === id); if (item) { item.done = !item.done; saveState(); } }
-    function resetChores() { chores.forEach(c => c.done = false); saveState(); }
-    function openAddChoreModal() { document.getElementById('modal-add-chore').classList.remove('hidden'); }
-    
-    function saveChore() {
-      const text = document.getElementById('input-chore-title').value.trim();
-      const freq = document.getElementById('input-chore-frequency').value;
-      const day = document.getElementById('input-chore-days').value;
-      const assignees = [];
-      if(document.getElementById('input-chore-hanna').checked) assignees.push('Hanna');
-      if(document.getElementById('input-chore-ryan').checked) assignees.push('Ryan');
-      if(!text) return;
-      chores.push({ id: 'c'+Date.now(), text, assignees, frequency: freq, days: freq === 'weekly' ? [day] : [], done: false });
-      document.getElementById('input-chore-title').value = ''; 
-      saveState(); 
-      closeModals();
-    }
-
-    function renderTasks() {
-      const container = document.getElementById('tasks-main-container');
-      if(!container) return; container.innerHTML = '';
-      if (tasks.length === 0) { container.innerHTML = `<p class="text-xs text-warm-muted p-2 text-center">No active tasks.</p>`; return; }
-      tasks.forEach(item => {
-        const card = document.createElement('div');
-        card.className = `p-3 rounded-2xl bg-white border border-warm-border flex justify-between items-center ${item.done ? 'opacity-50' : 'shadow-xs'}`;
-        card.innerHTML = `
-          <label class="flex items-center gap-3 flex-1 cursor-pointer">
-            <input type="checkbox" ${item.done ? 'checked' : ''} onchange="toggleTask('${item.id}')" class="w-5 h-5 rounded text-purple-600 focus:ring-0 cursor-pointer">
-            <span class="text-sm font-bold ${item.done ? 'line-through text-warm-muted' : 'text-warm-text'}">${item.text}</span>
-          </label>
-          ${item.assignee && item.assignee !== 'Unassigned' ? `<span class="text-[10px] font-bold px-2 py-1 rounded-lg border bg-purple-50 text-purple-700">${item.assignee}</span>` : ''}
-          <button onclick="deleteTask('${item.id}')" class="ml-2 text-warm-muted hover:text-rose-500">🗑️</button>
-        `;
-        container.appendChild(card);
-      });
-    }
-
-    function toggleTask(id) { const t = tasks.find(x => x.id === id); if(t) { t.done = !t.done; saveState(); } }
-    function deleteTask(id) { tasks = tasks.filter(x => x.id !== id); saveState(); }
-    function openAddTaskModal() { document.getElementById('modal-add-task').classList.remove('hidden'); }
-    
-    function saveTask() {
-      const text = document.getElementById('input-task-title').value.trim();
-      const assignee = document.getElementById('input-task-assignee').value;
-      if(!text) return;
-      tasks.push({ id: 't'+Date.now(), text, assignee, done: false });
-      document.getElementById('input-task-title').value = ''; 
-      saveState(); 
-      closeModals();
-    }
-    
-    async function syncTasksToTrello() {
-      const btn = document.getElementById('trello-tasks-sync-btn');
-      if (!TRELLO_API_KEY || !TRELLO_TOKEN || !TRELLO_TASKS_LIST_ID) return alert("Configure Trello Task List ID in Settings first.");
-      btn.innerHTML = `🔄 Working...`;
-      const uncompleted = tasks.filter(t => !t.done);
-      try {
-        for (const t of uncompleted) {
-          const cardName = t.assignee && t.assignee !== 'Unassigned' ? `[${t.assignee}] ${t.text}` : t.text;
-          await fetch(`https://api.trello.com/1/cards?idList=${TRELLO_TASKS_LIST_ID}&key=${TRELLO_API_KEY}&token=${TRELLO_TOKEN}&name=${encodeURIComponent(cardName)}`, { method: 'POST' });
-        }
-        btn.innerHTML = `✅ Done!`;
-        setTimeout(() => { btn.innerHTML = `🔄 Sync`; }, 2000);
-      } catch(err) {
-        alert("Failed to sync Tasks."); btn.innerHTML = `🔄 Sync`;
-      }
-    }
-
-    function renderTodayMeals() {
-      const container = document.getElementById('today-meal-slots');
-      if(!container) return; container.innerHTML = '';
-      SLOTS.forEach(slot => {
-        const mealData = plannedMeals[todayFullName] ? plannedMeals[todayFullName][slot] : null;
-        const rec = mealData ? recipes.find(r => r.id === mealData.recipeId) : null;
-        container.innerHTML += `
-          <div class="flex items-center justify-between p-3 rounded-xl bg-white border border-amber-200 shadow-sm cursor-pointer hover:border-amber-400" 
-               ${rec ? `onclick="openCookMode('${rec.id}')"` : `onclick="openMealPlannerModal()"`}>
-            <div class="flex flex-col"><span class="text-[9px] uppercase font-bold text-amber-600">${slot}</span><span class="text-sm font-bold text-warm-text">${rec ? rec.title : '<span class="text-warm-muted italic font-normal">Unplanned</span>'}</span></div>
-            <span class="text-amber-500">${rec ? '🍽️' : '➕'}</span>
-          </div>
-        `;
-      });
-    }
-
-    function openMealPlannerModal() { renderMealPlannerGrid(); renderMealPlannerVault(); document.getElementById('modal-meal-planner').classList.remove('hidden'); }
-    function renderMealPlannerGrid() {
-      document.getElementById('meal-planner-grid').innerHTML = DAYS_FULL.map(day => `
-        <div class="mb-4 bg-white border border-warm-border rounded-2xl p-3">
-          <h4 class="font-bold text-sm uppercase text-warm-text mb-2">${day}</h4>
-          <div class="grid grid-cols-3 gap-3">
-            ${SLOTS.map(slot => {
-              const mealData = plannedMeals[day] ? plannedMeals[day][slot] : null;
-              const rec = mealData ? recipes.find(r => r.id === mealData.recipeId) : null;
-              return `
-                <div class="border-2 border-dashed border-warm-border rounded-xl p-2 min-h-[70px] flex flex-col justify-center items-center bg-warm-subtle/50"
-                     ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDropMeal(event, '${day}', '${slot}')">
-                  <span class="text-[9px] font-bold uppercase text-warm-muted">${slot}</span>
-                  ${rec ? `<div class="draggable-item bg-amber-50 text-amber-900 border border-amber-200 rounded p-1 text-xs w-full mt-1 text-center font-semibold" draggable="true" ondragstart="onDragMealSlotStart(event, '${day}', '${slot}', '${rec.id}')">${rec.title}</div>` : `<span class="text-[10px] italic text-warm-muted/50 mt-1">Drop</span>`}
-                </div>
-              `;
-            }).join('')}
-          </div>
-        </div>
-      `).join('');
-    }
-
-    function renderMealPlannerVault() {
-      document.getElementById('meal-planner-vault').innerHTML = recipes.map(r => `
-        <div class="draggable-item p-3 rounded-xl bg-white border border-warm-border shadow-sm cursor-grab flex justify-between items-center group hover:border-amber-300" draggable="true" ondragstart="onDragRecipeStart(event, '${r.id}')">
-            <div class="font-bold text-sm text-warm-text truncate">${r.title}</div>
-            <button onclick="openCookMode('${r.id}')" class="text-warm-muted hover:text-blue-600 p-1">👁️</button>
-        </div>
-      `).join('');
-    }
-
-    function onDragRecipeStart(e, id) { e.dataTransfer.setData('json', JSON.stringify({ action: 'copy', recipeId: id })); }
-    function onDragMealSlotStart(e, day, slot, id) { e.dataTransfer.setData('json', JSON.stringify({ action: 'move', fromDay: day, fromSlot: slot, recipeId: id })); }
-    function onDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('drag-over-active'); }
-    function onDragLeave(e) { e.currentTarget.classList.remove('drag-over-active'); }
-    function onDropMeal(e, day, slot) {
-      e.preventDefault(); e.currentTarget.classList.remove('drag-over-active');
-      const payload = JSON.parse(e.dataTransfer.getData('json'));
-      if (payload.action === 'move') plannedMeals[payload.fromDay][payload.fromSlot] = null;
-      if (!plannedMeals[day]) plannedMeals[day] = { breakfast: null, lunch: null, dinner: null }; 
-      plannedMeals[day][slot] = { recipeId: payload.recipeId, cook: 'Hanna' };
-      saveState(); renderMealPlannerGrid();
-    }
-
-    function isItemInPantry(itemName) {
-        const query = itemName.toLowerCase();
-        for (const p of Object.keys(pantry)) {
-            if (pantry[p] && query.includes(p.toLowerCase())) return p; 
-        }
-        return false;
-    }
-
-    function extractGroceries() {
-      let extracted = {};
-      pantrySkipped = []; 
-      
-      DAYS_FULL.forEach(day => {
-        if (!plannedMeals[day]) return;
-        SLOTS.forEach(slot => {
-          const mealData = plannedMeals[day][slot];
-          if(mealData) {
-            const recipe = recipes.find(r => r.id === mealData.recipeId);
-            if(recipe && recipe.ingredients) {
-              recipe.ingredients.forEach(ingName => {
-                if (deletedGroceries.includes(ingName)) return;
-
-                const matchedPantry = isItemInPantry(ingName);
-                if (matchedPantry) {
-                    pantrySkipped.push(`${ingName} (Matched: ${matchedPantry})`);
-                    return; 
-                }
-                
-                let cat = 'Pantry / General';
-                const l = ingName.toLowerCase();
-                if (l.includes('chicken') || l.includes('beef') || l.includes('pork') || l.includes('salmon')) cat = 'Meat & Proteins';
-                else if (l.includes('onion') || l.includes('garlic') || l.includes('spinach') || l.includes('apple')) cat = 'Produce';
-                else if (l.includes('milk') || l.includes('cheese') || l.includes('butter') || l.includes('egg')) cat = 'Dairy';
-
-                if(!extracted[ingName]) extracted[ingName] = { name: ingName, category: cat, checked: false };
-              });
-            }
-          }
-        });
-      });
-      generatedGroceries = Object.values(extracted);
-    }
-
-    function renderGroceriesTab() {
-      const pCont = document.getElementById('pantry-staples-container');
-      if(pCont) pCont.innerHTML = Object.keys(pantry).map(item => `<label class="flex items-center gap-3 p-2 bg-white rounded-xl border border-warm-border cursor-pointer hover:border-emerald-300"><input type="checkbox" ${pantry[item] ? 'checked' : ''} onchange="togglePantry('${item}')" class="w-4 h-4 rounded text-emerald-600 focus:ring-0 cursor-pointer"><span class="text-xs font-bold text-warm-text">${item}</span></label>`).join('');
-
-      const sCont = document.getElementById('pantry-skipped-list');
-      if(sCont) sCont.innerHTML = pantrySkipped.length > 0 ? pantrySkipped.map(s => `<li class="line-through">${s}</li>`).join('') : `<li>No items skipped yet.</li>`;
-
-      const gCont = document.getElementById('grocery-categories-container');
-      if(!gCont) return; gCont.innerHTML = '';
-      
-      let cats = {};
-      generatedGroceries.forEach(g => { if(!cats[g.category]) cats[g.category] = []; cats[g.category].push(g); });
-      if(manualGroceries.length > 0) { cats['Manual Additions'] = manualGroceries.map(m => ({ name: m.text, category: 'Manual Additions', manualId: m.id, checked: m.checked })); }
-
-      if(Object.keys(cats).length === 0) return gCont.innerHTML = `<p class="text-sm text-warm-muted col-span-2">Plan meals to generate grocery lists.</p>`;
-
-      Object.keys(cats).sort().forEach(c => {
-        const itemsHtml = cats[c].map(item => `
-          <div class="flex justify-between items-center py-2 border-b border-warm-subtle last:border-0 group">
-            <div class="flex items-center gap-3 flex-1 pr-2">
-              <input type="checkbox" class="w-4 h-4 rounded text-amber-600 cursor-pointer" ${item.checked ? 'checked' : ''} onchange="${item.manualId ? `toggleManualGrocery('${item.manualId}')` : `toggleAutoGrocery('${item.name.replace(/'/g, "\\'")}')`}">
-              <span class="text-xs font-semibold ${item.checked ? 'line-through text-warm-muted' : 'text-warm-text'}">${item.name}</span>
-            </div>
-            ${item.manualId ? 
-                `<button onclick="deleteManualGrocery('${item.manualId}')" class="text-warm-muted hover:text-rose-500 opacity-0 group-hover:opacity-100">🗑️</button>` : 
-                `<button onclick="hideAutoGrocery('${item.name.replace(/'/g, "\\'")}')" class="text-warm-muted hover:text-rose-500 opacity-0 group-hover:opacity-100" title="Hide this item">🚫</button>`
-            }
-          </div>
-        `).join('');
-        gCont.innerHTML += `<div class="bg-white border rounded-2xl p-4 h-max shadow-xs"><h4 class="font-bold text-xs uppercase text-amber-700 mb-2">${c}</h4>${itemsHtml}</div>`;
-      });
-    }
-
-    function togglePantry(item) { pantry[item] = !pantry[item]; saveState(); }
-    function toggleAutoGrocery(name) { const g = generatedGroceries.find(x => x.name === name); if(g) { g.checked = !g.checked; renderGroceriesTab(); } }
-    
-    function addManualGrocery() { const val = document.getElementById('manual-grocery-input').value.trim(); if(val) { manualGroceries.push({ id: 'm'+Date.now(), text: val, checked: false }); document.getElementById('manual-grocery-input').value = ''; saveState(); } }
-    function toggleManualGrocery(id) { const it = manualGroceries.find(m => m.id === id); if(it) { it.checked = !it.checked; saveState(); } }
-    function deleteManualGrocery(id) { manualGroceries = manualGroceries.filter(m => m.id !== id); saveState(); }
-    function hideAutoGrocery(name) { deletedGroceries.push(name); saveState(); }
-    function clearDeletedGroceries() { deletedGroceries = []; saveState(); alert("Hidden auto-groceries restored."); }
-
-    async function syncGroceriesToTrello() {
-      const btn = document.getElementById('trello-grocery-sync-btn');
-      if (!TRELLO_API_KEY || !TRELLO_TOKEN || !TRELLO_GROCERY_LIST_ID) return alert("Configure Trello Grocery List ID in Settings first.");
-      btn.innerHTML = `🔄 Working...`;
-      
-      let itemsToPush = [];
-      generatedGroceries.forEach(g => { if(!g.checked) itemsToPush.push(`[${g.category}] ${g.name}`); });
-      manualGroceries.forEach(m => { if(!m.checked) itemsToPush.push(`[Custom] ${m.text}`); });
-      
-      try {
-        for (const itemName of itemsToPush) {
-          await fetch(`https://api.trello.com/1/cards?idList=${TRELLO_GROCERY_LIST_ID}&key=${TRELLO_API_KEY}&token=${TRELLO_TOKEN}&name=${encodeURIComponent(itemName)}`, { method: 'POST' });
-        }
-        btn.innerHTML = `✅ Done!`;
-        setTimeout(() => { btn.innerHTML = `🔄 Push to Trello`; }, 2000);
-      } catch(err) {
-        alert("Failed to sync Groceries.");
-        btn.innerHTML = `🔄 Push to Trello`;
-      }
-    }
-
-    function renderRecipeVault() {
-      const grid = document.getElementById('recipe-vault-grid');
-      if(!grid) return;
-      grid.innerHTML = recipes.map(r => `
-        <div class="warm-card rounded-2xl p-4 flex flex-col cursor-pointer hover:border-amber-400 group" onclick="openCookMode('${r.id}')">
-          <div class="flex justify-between items-start mb-3">
-              <div class="w-10 h-10 rounded-full bg-rose-50 text-rose-600 flex items-center justify-center text-lg">🍽️</div>
-              <button onclick="event.stopPropagation(); openEditRecipeModal('${r.id}')" class="text-warm-muted hover:text-blue-600 opacity-0 group-hover:opacity-100 p-1">✏️</button>
-          </div>
-          <h3 class="font-bold text-warm-text text-base leading-tight">${r.title}</h3>
-        </div>
-      `).join('');
-    }
-
-    function openCookMode(recipeId) {
-      const r = recipes.find(x => x.id === recipeId);
-      if(!r) return;
-      document.getElementById('cook-title').innerText = r.title;
-      
-      const linkEl = document.getElementById('cook-link');
-      if (r.link) { linkEl.href = r.link; linkEl.classList.remove('hidden'); } 
-      else { linkEl.classList.add('hidden'); }
-      
-      document.getElementById('cook-ingredients').innerHTML = (r.ingredients||[]).map(i => `<li>${i}</li>`).join('');
-      document.getElementById('cook-instructions').innerHTML = (r.instructions||[]).map(i => `<li>${i}</li>`).join('');
-      
-      document.getElementById('cook-edit-btn').onclick = () => openEditRecipeModal(recipeId);
-      document.getElementById('modal-cook-mode').classList.remove('hidden');
-    }
-
-    function openAddRecipeModal() {
-        document.getElementById('recipe-modal-title').innerText = "Add Recipe";
-        document.getElementById('input-recipe-id').value = "";
-        document.getElementById('input-recipe-title').value = "";
-        document.getElementById('input-recipe-link').value = "";
-        document.getElementById('input-recipe-ingredients').value = "";
-        document.getElementById('input-recipe-instructions').value = "";
-        document.getElementById('ai-error-msg').classList.add('hidden');
-        document.getElementById('ai-import-box').classList.remove('hidden');
-        document.getElementById('btn-delete-recipe').classList.add('hidden');
-        document.getElementById('modal-add-recipe').classList.remove('hidden');
-    }
-
-    function openEditRecipeModal(id) {
-        const r = recipes.find(x => x.id === id);
-        if(!r) return;
-        closeModals(); 
-        
-        document.getElementById('recipe-modal-title').innerText = "Edit Recipe";
-        document.getElementById('input-recipe-id').value = r.id;
-        document.getElementById('input-recipe-title').value = r.title;
-        document.getElementById('input-recipe-link').value = r.link || "";
-        document.getElementById('input-recipe-ingredients').value = (r.ingredients||[]).join('\n');
-        document.getElementById('input-recipe-instructions').value = (r.instructions||[]).join('\n');
-        
-        document.getElementById('ai-import-box').classList.add('hidden'); 
-        document.getElementById('btn-delete-recipe').classList.remove('hidden');
-        document.getElementById('modal-add-recipe').classList.remove('hidden');
-    }
-
-    function saveRecipe() {
-      const id = document.getElementById('input-recipe-id').value;
-      const title = document.getElementById('input-recipe-title').value.trim();
-      const link = document.getElementById('input-recipe-link').value.trim();
-      const ingText = document.getElementById('input-recipe-ingredients').value.trim();
-      const instText = document.getElementById('input-recipe-instructions').value.trim();
-      
-      if (!title || !ingText) return alert("Title and Ingredients are required.");
-      
-      const ingredients = ingText.split('\n').map(l => l.trim()).filter(Boolean);
-      const instructions = instText.split('\n').map(l => l.trim()).filter(Boolean);
-      
-      if (id) {
-          const idx = recipes.findIndex(x => x.id === id);
-          if(idx !== -1) recipes[idx] = { id, title, link, ingredients, instructions };
-      } else {
-          recipes.push({ id: 'r' + Date.now(), title, link, ingredients, instructions });
-      }
-      saveState(); 
-      closeModals();
-    }
-
-    function deleteCurrentRecipe() {
-        if(confirm("Are you sure you want to delete this recipe?")) {
-            const id = document.getElementById('input-recipe-id').value;
-            recipes = recipes.filter(r => r.id !== id);
-            DAYS_FULL.forEach(d => {
-                SLOTS.forEach(s => {
-                    if(plannedMeals[d] && plannedMeals[d][s] && plannedMeals[d][s].recipeId === id) plannedMeals[d][s] = null;
-                });
-            });
-            saveState(); 
-            closeModals();
-        }
-    }
-
-    async function importAiRecipe() {
-      if(!GEMINI_API_KEY) return alert("Add Gemini API Key in Settings first.");
-      const input = document.getElementById('ai-recipe-input').value;
-      if(!input) return alert("Paste recipe text first.");
-      
-      const btn = document.getElementById('ai-btn');
-      const errBox = document.getElementById('ai-error-msg');
-      btn.innerHTML = 'Working...';
-      errBox.classList.add('hidden');
-      
-      try {
-        const prompt = `Read the following text. Return ONLY a JSON object containing the recipe. Do not write any other text. 
-        Format required: {"title": "Recipe Name", "ingredients": ["1 cup flour", "2 eggs"], "instructions": ["Step 1", "Step 2"]}. 
-        Text: ${input}`;
-        
-        const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${GEMINI_API_KEY}`, {
-          method: 'POST', 
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] })
-        });
-        
-        if(!res.ok) {
-            const errData = await res.json();
-            throw new Error(errData.error?.message || "Google API Error: " + res.status);
-        }
-
-        const data = await res.json();
-        const textResult = data.candidates[0].content.parts[0].text;
-        
-        const jsonMatch = textResult.match(/\{[\s\S]*\}/);
-        if(!jsonMatch) throw new Error("Could not find recipe data in AI response.");
-        
-        const parsed = JSON.parse(jsonMatch[0]);
-
-        document.getElementById('input-recipe-title').value = parsed.title || "Imported Recipe";
-        document.getElementById('input-recipe-ingredients').value = (parsed.ingredients || []).join('\n');
-        document.getElementById('input-recipe-instructions').value = (parsed.instructions || []).join('\n');
-        document.getElementById('ai-recipe-input').value = ''; 
-        btn.innerHTML = 'Import';
-      } catch(err) {
-        errBox.innerText = `Failed: ${err.message}`;
-        errBox.classList.remove('hidden');
-        btn.innerHTML = 'Import';
-      }
-    }
-  </script>
+/* ---------- boot ---------- */
+window.addEventListener('load',()=>{
+  tab('dashboard');autoReset();save();tick();setupCal();weather();
+  setInterval(tick,1000);setInterval(weather,1800000);
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden)tick()});
+});
+</script>
 </body>
 </html>
