@@ -52,7 +52,7 @@ button{cursor:pointer}.drag{cursor:grab}
 <main class="flex-1 p-6 overflow-hidden">
   <div id="t-dashboard" class="h-full flex gap-6">
     <section class="w-1/2 flex flex-col gap-6 h-full overflow-hidden">
-      <div class="h-1/2 flex flex-col card rounded-3xl p-5 overflow-hidden">
+      <div class="flex-[2] min-h-0 flex flex-col card rounded-3xl p-5 overflow-hidden">
         <div class="flex flex-col gap-3 pb-3 border-b border-warm-border shrink-0">
           <div class="flex items-center justify-between">
             <h2 class="font-display font-bold text-base flex items-center gap-2.5"><span class="p-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700"><i data-i="check"></i></span>Household Chores</h2>
@@ -73,7 +73,7 @@ button{cursor:pointer}.drag{cursor:grab}
         <div id="chores" class="flex-1 overflow-y-auto my-2 space-y-2 pr-2"></div>
         <p class="text-[10px] text-warm-muted shrink-0">Daily chores reset at midnight. Weekly chores reset Monday.</p>
       </div>
-      <div class="h-1/2 flex flex-col card rounded-3xl p-5 overflow-hidden">
+      <div class="flex-[1] min-h-0 flex flex-col card rounded-3xl p-5 overflow-hidden">
         <div class="flex items-center justify-between pb-3 border-b border-warm-border shrink-0">
           <h2 class="font-display font-bold text-base flex items-center gap-2.5"><span class="p-1.5 rounded-xl bg-purple-50 border border-purple-200 text-purple-700"><i data-i="list"></i></span>One-Off Tasks</h2>
           <div class="flex gap-2">
@@ -91,7 +91,7 @@ button{cursor:pointer}.drag{cursor:grab}
           <button onclick="openCal()" class="px-3 py-1.5 rounded-xl bg-blue-50 text-blue-700 hover:bg-blue-100 text-xs font-bold border border-blue-200 flex items-center gap-1.5"><i data-i="cal" data-s="14"></i> Month View</button>
         </div>
         <div class="flex-1 overflow-hidden rounded-xl border border-warm-border relative bg-warm-subtle">
-          <iframe id="cal-frame" title="Today's schedule" class="w-full h-full hidden" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe>
+          <iframe id="cal-frame" title="Today's schedule" class="w-full h-full hidden" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
           <div id="cal-empty" class="absolute inset-0 flex flex-col items-center justify-center text-warm-muted text-xs font-bold text-center px-4">Calendar not linked yet.<br>Open Settings and paste your Google Calendar embed link.</div>
         </div>
       </div>
@@ -175,7 +175,7 @@ let recipes=load('sl_recipes',[]),chores=load('sl_chores',[]),tasks=load('sl_tas
 skipG=load('sl_del_groceries',[]),checked=load('sl_checked',[]),pushed=load('sl_pushed',[]),meta=load('sl_meta',{}),
 pantry=load('sl_pantry',{'Soy Sauce':true,'White Rice':true,'Olive Oil':true,'Salt':true,'Pepper':true,'Sugar':true,'Flour':true});
 let meals=load('sl_meals',null);
-let log=load('sl_log',[]),rewards=load('sl_rewards',{});
+let log=load('sl_log',[]),rewards=load('sl_rewards',{}),trel=load('sl_trello',{});
 if(!meals||!meals.Monday){meals={};DAYS.forEach(d=>meals[d]={breakfast:null,lunch:null,dinner:null})}
 let groceries=[],skipped=[],chFreq='daily',chWho='ALL',picked=null;
 
@@ -216,17 +216,18 @@ const sid=(v,p,i)=>String(v||p+Date.now()+i).replace(/[^\w-]/g,'');
 function clean(){
   recipes=arr(recipes).filter(obj).map((r,i)=>({id:sid(r.id,'r',i),title:str(r.title)||'Untitled',link:safeUrl(r.link),ingredients:arr(r.ingredients).map(str).filter(Boolean),instructions:arr(r.instructions).map(str).filter(Boolean)}));
   chores=arr(chores).filter(obj).map((c,i)=>({id:sid(c.id,'c',i),text:str(c.text||c.title),assignees:arr(c.assignees).map(str),frequency:c.frequency==='weekly'?'weekly':'daily',days:arr(c.days).map(str),points:Math.max(1,Math.min(10,+c.points||1)),done:!!c.done}));
-  tasks=arr(tasks).filter(obj).map((t,i)=>({id:sid(t.id,'t',i),text:str(t.text),assignee:str(t.assignee)||'Unassigned',done:!!t.done,synced:!!t.synced}));
+  tasks=arr(tasks).filter(obj).map((t,i)=>({id:sid(t.id,'t',i),text:str(t.text),assignee:str(t.assignee)||'Unassigned',done:!!t.done,synced:!!t.synced,cardId:t.cardId?String(t.cardId).replace(/[^\w-]/g,''):''}));
   manual=arr(manual).filter(obj).map((m,i)=>({id:sid(m.id,'m',i),text:str(m.text),checked:!!m.checked}));
   skipG=arr(skipG).map(str);checked=arr(checked).map(str);pushed=arr(pushed).map(str);
   log=arr(log).filter(obj).map(l=>({id:sid(l.id,'l',0),cid:str(l.cid),text:str(l.text),who:WHO.includes(l.who)?l.who:'',pts:Math.max(0,+l.pts||0),date:str(l.date),week:str(l.week),ts:+l.ts||0})).slice(-1500);
   if(!obj(rewards))rewards={};rewards.bal=obj(rewards.bal)?rewards.bal:{};rewards.hist=arr(rewards.hist).filter(obj).slice(0,26);rewards.spent=arr(rewards.spent).filter(obj).slice(0,50);rewards.prize=Math.max(1,Math.min(999,+rewards.prize||10));
+  if(!obj(trel))trel={};trel.g=obj(trel.g)?trel.g:{};trel.seen=arr(trel.seen).map(str);trel.done=arr(trel.done).map(str);
   if(!obj(pantry))pantry={};if(!obj(meta))meta={};if(!obj(meals))meals={};
   DAYS.forEach(d=>{if(!obj(meals[d]))meals[d]={};SLOTS.forEach(s=>{const m=meals[d][s];meals[d][s]=obj(m)&&m.recipeId?{recipeId:sid(m.recipeId,'r',0)}:null})});
 }
 
 function save(){
-  const d={sl_recipes:recipes,sl_chores:chores,sl_tasks:tasks,sl_meals:meals,sl_pantry:pantry,sl_manual_groceries:manual,sl_del_groceries:skipG,sl_checked:checked,sl_pushed:pushed,sl_meta:meta,sl_log:log,sl_rewards:rewards};
+  const d={sl_recipes:recipes,sl_chores:chores,sl_tasks:tasks,sl_meals:meals,sl_pantry:pantry,sl_manual_groceries:manual,sl_del_groceries:skipG,sl_checked:checked,sl_pushed:pushed,sl_meta:meta,sl_log:log,sl_rewards:rewards,sl_trello:trel};
   try{for(const k in d)localStorage.setItem(k,JSON.stringify(d[k]))}catch(e){alert('Storage is full or blocked; changes may not be saved.')}
   safe('grocery list',extract);renderAll();
 }
@@ -303,7 +304,7 @@ function setupCal(){
 }
 function openCal(){
   const u=calUrl('MONTH');if(!u)return alert('Add your Google Calendar embed link in Settings first.');
-  openM(`<div class="flex flex-col h-full">${mh('Calendar')}<iframe title="Month calendar" src="${esc(u)}" class="flex-1 rounded-xl border border-warm-border" style="border:0" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-popups allow-popups-to-escape-sandbox"></iframe></div>`,'max-w-6xl h-[85vh]');
+  openM(`<div class="flex flex-col h-full">${mh('Calendar')}<iframe title="Month calendar" src="${esc(u)}" class="flex-1 rounded-xl border border-warm-border" style="border:0" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div>`,'max-w-6xl h-[85vh]');
 }
 
 /* ---------- chores ---------- */
@@ -312,7 +313,7 @@ function renderChores(){
   document.querySelectorAll('[data-freq]').forEach(b=>b.className=SEG+(b.dataset.freq===chFreq?'bg-white shadow-sm':'text-warm-muted'));
   document.querySelectorAll('[data-who]').forEach(b=>b.className='px-3 py-1 rounded-xl text-xs font-bold '+(b.dataset.who===chWho?'bg-emerald-600 text-white':'border border-warm-border bg-white text-warm-muted'));
   const today=dayName();
-  let l=chores.filter(c=>chFreq==='daily'?(c.frequency==='daily'||c.days.includes(today)||(c.frequency==='weekly'&&!c.days.length)):c.frequency==='weekly');
+  let l=chores.filter(c=>chFreq==='daily'?(c.frequency==='daily'||c.days.includes(today)):c.frequency==='weekly');
   if(chWho!=='ALL')l=l.filter(c=>c.assignees.includes(chWho));
   l.sort((a,b)=>a.done-b.done);
   $('chores').innerHTML=l.length?l.map(c=>`<div class="p-3 rounded-2xl bg-white border border-warm-border flex justify-between items-center ${c.done?'opacity-50':''}" data-id="${c.id}">${GRIP}
@@ -343,13 +344,13 @@ function saveChore(){
 }
 
 /* ---------- Trello ---------- */
-async function trello(listId,names,btn){
+async function trello(listId,names,btn){ // creates cards; returns their ids, or false if it failed
   const key=cfg('t_api'),token=cfg('t_token');
   if(!key||!token||!listId){alert('Add your Trello key, token and list ID in Settings first.');return false}
-  const orig=btn.innerHTML;btn.textContent='Working...';let ok=false;
-  try{for(const name of names){const r=await fetch('https://api.trello.com/1/cards?'+new URLSearchParams({idList:listId,key,token,name}),{method:'POST'});if(!r.ok)throw new Error('Trello said '+r.status)}ok=true;btn.textContent='Done'}
+  const orig=btn.innerHTML;btn.textContent='Working...';let ids=false;
+  try{const out=[];for(const name of names){const r=await fetch('https://api.trello.com/1/cards?'+new URLSearchParams({idList:listId,key,token,name}),{method:'POST'});if(!r.ok)throw new Error('Trello said '+r.status);out.push((await r.json()).id)}ids=out;btn.textContent='Done'}
   catch(e){alert('Sync failed: '+e.message);btn.textContent='Failed'}
-  setTimeout(()=>{btn.innerHTML=orig;hydrate()},2000);return ok;
+  setTimeout(()=>{btn.innerHTML=orig;hydrate()},2000);return ids;
 }
 
 /* ---------- tasks ---------- */
@@ -367,8 +368,11 @@ function openTask(){
 }
 function saveTask(){const text=$('k-t').value.trim().slice(0,120);if(!text)return;tasks.push({id:'t'+Date.now(),text,assignee:$('k-a').value,done:false});save();closeM()}
 async function syncTasks(b){
-  const todo=tasks.filter(t=>!t.done&&!t.synced);if(!todo.length)return alert('Nothing new to sync.');
-  if(await trello(cfg('t_task_list'),todo.map(t=>t.assignee&&t.assignee!=='Unassigned'?`[${t.assignee}] ${t.text}`:t.text),b)){todo.forEach(t=>t.synced=true);save()}
+  const todo=tasks.filter(t=>!t.done&&!t.synced);
+  if(todo.length){
+    const ids=await trello(cfg('t_task_list'),todo.map(t=>t.assignee&&t.assignee!=='Unassigned'?`[${t.assignee}] ${t.text}`:t.text),b);
+    if(!ids)return;todo.forEach((t,k)=>{t.synced=true;t.cardId=String(ids[k]||'')});save();await pullTrello(false);
+  }else{const o=b.innerHTML;b.textContent='Checking...';await pullTrello(true);b.innerHTML=o;hydrate()}
 }
 
 /* ---------- meals ---------- */
@@ -431,8 +435,10 @@ function addManual(){const v=$('g-new').value.trim();if(v){manual.push({id:'m'+D
 function addPantry(){const v=$('p-new').value.trim();if(v){pantry[v]=true;$('p-new').value='';save()}}
 async function pushGroceries(b){
   const items=[...groceries.filter(g=>!g.checked).map(g=>({k:g.name,n:`[${g.category}] ${g.name}`})),...manual.filter(m=>!m.checked).map(m=>({k:m.text,n:`[Custom] ${m.text}`}))].filter(i=>!pushed.includes(i.k));
-  if(!items.length)return alert('Nothing new to push.');
-  if(await trello(cfg('t_groc_list'),items.map(i=>i.n),b)){pushed.push(...items.map(i=>i.k));save()}
+  if(items.length){
+    const ids=await trello(cfg('t_groc_list'),items.map(i=>i.n),b);
+    if(!ids)return;items.forEach((i,k)=>{pushed.push(i.k);if(ids[k])trel.g[i.k]=ids[k]});save();await pullTrello(false);
+  }else{const o=b.innerHTML;b.textContent='Checking...';await pullTrello(true);b.innerHTML=o;hydrate()}
 }
 
 /* ---------- recipes ---------- */
@@ -579,12 +585,55 @@ function restore(inp){
   r.readAsText(f);
 }
 
+/* ---------- trello two-way sync: Trello changes flow back into the app ---------- */
+const stripCat=n=>String(n).replace(/^\[[^\]]*\]\s*/,'').trim();
+const rid=()=>Date.now()+''+Math.floor(Math.random()*1000);
+async function trelloGet(listId){
+  const r=await fetch(`https://api.trello.com/1/lists/${encodeURIComponent(listId)}/cards?`+new URLSearchParams({key:cfg('t_api'),token:cfg('t_token'),fields:'name,dueComplete'}));
+  if(!r.ok)throw new Error('Trello said '+r.status);return r.json();
+}
+let pulling=false;
+async function pullTrello(loud){
+  if(!cfg('t_api')||!cfg('t_token')){if(loud)alert('Add your Trello key and token in Settings first.');return}
+  if(pulling)return;pulling=true;
+  try{
+    const first=!trel.init,seen=new Set(trel.seen);let changed=false;
+    const gl=cfg('t_groc_list')?await trelloGet(cfg('t_groc_list')):null;
+    const tl=cfg('t_task_list')?await trelloGet(cfg('t_task_list')):null;
+    if(gl){
+      const byName=new Map(gl.map(c=>[stripCat(c.name).toLowerCase(),c]));
+      if(first)[...groceries.map(g=>g.name),...manual.map(m=>m.text)].forEach(n=>{const c=byName.get(n.toLowerCase());if(c&&!trel.g[n])trel.g[n]=c.id}); // link cards older versions made
+      Object.entries(trel.g).forEach(([n,id])=>{ // bought = card completed, archived, deleted or moved to another list
+        const c=gl.find(x=>x.id===id);
+        if((!c||c.dueComplete)&&!trel.done.includes(id)){
+          trel.done.push(id);const m=manual.find(x=>x.text===n);
+          if(m)m.checked=true;else if(!checked.includes(n))checked.push(n);changed=true;
+        }});
+      const mapped=new Set(Object.values(trel.g));
+      gl.forEach(c=>{ // cards you added in Trello become manual grocery items
+        if(!first&&!seen.has(c.id)&&!mapped.has(c.id)){const n=stripCat(c.name).slice(0,80);if(n){manual.push({id:'m'+rid(),text:n,checked:false});trel.g[n]=c.id;changed=true}}
+        seen.add(c.id)});
+    }
+    if(tl){
+      if(first)tasks.forEach(t=>{if(t.synced&&!t.cardId){const c=tl.find(x=>x.name===(t.assignee&&t.assignee!=='Unassigned'?`[${t.assignee}] ${t.text}`:t.text));if(c)t.cardId=c.id}});
+      tasks.forEach(t=>{if(t.cardId&&!t.done&&!trel.done.includes(t.cardId)){const c=tl.find(x=>x.id===t.cardId);if(!c||c.dueComplete){trel.done.push(t.cardId);t.done=true;changed=true}}});
+      tl.forEach(c=>{ // cards you added in Trello become tasks
+        if(!first&&!seen.has(c.id)&&!tasks.some(t=>t.cardId===c.id)){const m=c.name.match(/^\[(Hanna|Ryan)\]\s*(.*)$/);tasks.push({id:'t'+rid(),text:(m?m[2]:c.name).slice(0,120),assignee:m?m[1]:'Unassigned',done:false,synced:true,cardId:c.id});changed=true}
+        seen.add(c.id)});
+    }
+    trel.init=true;trel.seen=[...seen].slice(-1000);trel.done=trel.done.slice(-500);
+    if(changed)save();else{try{localStorage.setItem('sl_trello',JSON.stringify(trel))}catch{}}
+  }catch(e){console.warn('Trello check failed',e);if(loud)alert('Could not check Trello: '+e.message)}
+  finally{pulling=false}
+}
+
 /* ---------- boot ---------- */
 window.addEventListener('load',()=>{
   tab('dashboard');safe('startup',()=>{clean();autoReset()});safe('golf',buildGolf);save();safe('clock',tick);safe('calendar',setupCal);weather();
+  setTimeout(()=>pullTrello(false),1500);setInterval(()=>pullTrello(false),120000);
   safe('reorder',()=>{sortable($('chores'),ids=>{chores=applyOrder(chores,ids);save()});sortable($('tasks'),ids=>{tasks=applyOrder(tasks,ids);save()})});
   setInterval(()=>safe('clock',tick),1000);setInterval(weather,1800000);
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden)safe('clock',tick)});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){safe('clock',tick);pullTrello(false)}});
 });
 </script>
 </body>
