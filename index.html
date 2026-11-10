@@ -220,7 +220,7 @@ function clean(){
   manual=arr(manual).filter(obj).map((m,i)=>({id:sid(m.id,'m',i),text:str(m.text),checked:!!m.checked}));
   skipG=arr(skipG).map(str);checked=arr(checked).map(str);pushed=arr(pushed).map(str);
   log=arr(log).filter(obj).map(l=>({id:sid(l.id,'l',0),cid:str(l.cid),text:str(l.text),who:WHO.includes(l.who)?l.who:'',pts:Math.max(0,+l.pts||0),date:str(l.date),week:str(l.week),ts:+l.ts||0})).slice(-1500);
-  if(!obj(rewards))rewards={};rewards.bal=obj(rewards.bal)?rewards.bal:{};rewards.hist=arr(rewards.hist).filter(obj).slice(0,26);rewards.spent=arr(rewards.spent).filter(obj).slice(0,50);rewards.prize=Math.max(1,Math.min(999,+rewards.prize||10));rewards.n=Math.max(3,Math.min(12,Math.floor(+rewards.n)||6));rewards.won=obj(rewards.won)?rewards.won:{};
+  if(!obj(rewards))rewards={};rewards.bal=obj(rewards.bal)?rewards.bal:{};rewards.hist=arr(rewards.hist).filter(obj).slice(0,26);rewards.spent=arr(rewards.spent).filter(obj).slice(0,50);rewards.prize=Math.max(1,Math.min(999,+rewards.prize||10));rewards.n=Math.max(3,Math.min(12,Math.floor(+rewards.n)||6));rewards.won=obj(rewards.won)?rewards.won:{};rewards.equal=!!rewards.equal;
   if(!obj(trel))trel={};trel.g=obj(trel.g)?trel.g:{};trel.seen=arr(trel.seen).map(str);trel.done=arr(trel.done).map(str);
   if(!obj(pantry))pantry={};if(!obj(meta))meta={};if(!obj(meals))meals={};
   DAYS.forEach(d=>{if(!obj(meals[d]))meals[d]={};SLOTS.forEach(s=>{const m=meals[d][s];meals[d][s]=obj(m)&&m.recipeId?{recipeId:sid(m.recipeId,'r',0)}:null})});
@@ -496,8 +496,9 @@ const GOLF={Hanna:{y:26,shirt:'#10B981',hair:'#7C4A2D'},Ryan:{y:54,shirt:'#3B82F
 const perWeek=c=>c.frequency==='daily'?7:1;
 // points a person can earn in a week; shared chores count half to each person
 const possible=w=>chores.reduce((t,c)=>c.assignees.includes(w)?t+(c.points||1)*perWeek(c)/c.assignees.length:t,0);
+const basis=w=>rewards.equal?(possible('Hanna')+possible('Ryan'))/2:possible(w); // own list, or the average of both lists in same-size mode
 const earned=(w,wk=weekKey(new Date()))=>log.filter(l=>l.week===wk&&l.who===w).reduce((t,l)=>t+l.pts,0);
-const prog=(w,wk)=>{const p=possible(w);return p?Math.min(1,earned(w,wk)/p):0};
+const prog=(w,wk)=>{const p=basis(w);return p?Math.min(1,earned(w,wk)/p):0};
 const pct=w=>Math.round(prog(w)*100);
 function logIt(c,who){const n=new Date();log.push({id:'l'+Date.now(),cid:c.id,text:c.text,who,pts:c.points||1,date:dayKey(n),week:weekKey(n),ts:n.getTime()});log=log.slice(-1500)}
 function undoLog(c){const n=new Date(),dk=dayKey(n),wk=weekKey(n);for(let i=log.length-1;i>=0;i--){const l=log[i];if(l.cid===c.id&&(c.frequency==='daily'?l.date===dk:l.week===wk)){log.splice(i,1);break}}}
@@ -506,27 +507,22 @@ function askWho(c){
   renderChores();
 }
 function pick(id,who){const c=chores.find(x=>x.id===id);if(c&&!c.done){c.done=true;logIt(c,who);save()}closeM()}
-const HOLES=()=>rewards.n||6;
-function crossings(w,wk=weekKey(new Date())){ // when w reached each hole's share of their own weekly goal
-  const P=possible(w),N=HOLES(),t=[];if(!P)return t;let sum=0;
-  log.filter(l=>l.week===wk&&l.who===w).sort((a,b)=>a.ts-b.ts).forEach(l=>{sum+=l.pts;while(t.length<N&&sum>=P*(t.length+1)/N-1e-9)t.push(l.ts)});
-  return t;
+// One hole per day. Both golfers play today's hole; at midnight it goes to whoever finished a bigger share of their own day.
+const dayDates=wk=>{const b=new Date(wk+'T12:00:00');return Array.from({length:7},(_,i)=>{const d=new Date(b);d.setDate(b.getDate()+i);return dayKey(d)})};
+const dayPts=(w,dk)=>log.filter(l=>l.date===dk&&l.who===w).reduce((t,l)=>t+l.pts,0);
+const dayProg=(w,dk=dayKey(new Date()))=>{const T=basis(w)/7;return T?Math.min(1,dayPts(w,dk)/T):0};
+function dayResult(dk){const a=dayProg('Hanna',dk),b=dayProg('Ryan',dk);if(a<=0&&b<=0)return null;return a>b?'Hanna':b>a?'Ryan':'tie'}
+function holeWinners(wk=weekKey(new Date()),finalOnly=false){ // 7 results; finalOnly leaves out today
+  const today=dayKey(new Date());return dayDates(wk).map(dk=>(dk>today||(finalOnly&&dk>=today))?null:dayResult(dk));
 }
-function holeWinners(wk=weekKey(new Date())){ // for each hole: who got there first (or null if nobody yet)
-  const a=crossings('Hanna',wk),b=crossings('Ryan',wk);
-  return Array.from({length:HOLES()},(_,k)=>{const x=a[k],y=b[k];if(x===undefined&&y===undefined)return null;if(y===undefined)return'Hanna';if(x===undefined)return'Ryan';return x<=y?'Hanna':'Ryan'});
-}
-function holeState(w){ // k = holes finished, f = how far along the current hole (0 to 1)
-  const P=possible(w),N=HOLES();if(!P)return{k:0,f:0,hole:1};
-  const x=Math.min(1,earned(w)/P)*N,k=Math.min(Math.floor(x+1e-9),N);return{k,f:k>=N?1:x-k,hole:Math.min(k+1,N)};
-}
-const need=L=>4*L*(L-1); // total holes won needed to reach level L: 8, 24, 48, 80...
-const lifeHoles=w=>(rewards.won[w]||0)+holeWinners().filter(x=>x===w).length;
+const wonCount=(hw,w)=>hw.filter(x=>x===w).length;
+const need=L=>2*L*(L-1); // total holes won needed to reach level L: 4, 12, 24, 40...
+const lifeHoles=w=>(rewards.won[w]||0)+wonCount(holeWinners(weekKey(new Date()),true),w);
 function level(w){const h=lifeHoles(w);let L=1;while(h>=need(L+1))L++;return{L,h,from:need(L),to:need(L+1)}}
 function closeWeek(wk){ // the week's winner (most holes) gets the prize; holes count toward levels
   if(rewards.hist.some(h=>h.week===wk))return;rewards.won=rewards.won||{};
   const a=WHO.map(w=>prog(w,wk));if(Math.max(...a)<=0)return;
-  const hw=holeWinners(wk),wins=WHO.map(w=>hw.filter(x=>x===w).length);
+  const hw=holeWinners(wk,true),wins=WHO.map(w=>wonCount(hw,w));
   WHO.forEach((w,i)=>rewards.won[w]=(rewards.won[w]||0)+wins[i]);
   const key=wins[0]!==wins[1]?(wins[0]>wins[1]?0:1):(a[0]!==a[1]?(a[0]>a[1]?0:1):-1);
   const win=key<0?WHO:[WHO[key]],each=Math.max(1,Math.round(rewards.prize/win.length));
@@ -537,54 +533,62 @@ function logOf(c){const n=new Date(),dk=dayKey(n),wk=weekKey(n);for(let i=log.le
 const creditChip=c=>{const l=c.done&&logOf(c);return l&&l.who?`<button onclick="swapCredit('${c.id}')" class="text-[10px] font-bold px-2 py-1 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 flex items-center gap-1" aria-label="Change who gets the credit">by ${esc(l.who)} ${ic('swap',12)}</button>`:''};
 function swapCredit(id){const c=chores.find(x=>x.id===id),l=c&&logOf(c);if(!l||!WHO.includes(l.who))return;l.who=WHO[1-WHO.indexOf(l.who)];save()}
 
-// two layouts to try. Each golfer plays their own hole at their own pace; s = tee x, h = hole x
-const LAYOUTS={
-  same:{name:'Same fairway, one flag',g:{Hanna:{y:46,s:24,h:360},Ryan:{y:57,s:24,h:360}},holes:[[null,360,52]]},
-  lanes:{name:'Two lanes, two flags',g:{Hanna:{y:40,s:24,h:360},Ryan:{y:58,s:24,h:360}},holes:[['Hanna',360,40],['Ryan',360,58]]}
-};
-let golfStyle='same';try{const v=localStorage.getItem('sl_golfstyle');if(LAYOUTS[v])golfStyle=v}catch{}
-const AHEAD=17; // how far in front of the golfer the ball sits
+const DAYN=['Mon','Tue','Wed','Thu','Fri','Sat','Sun'],todayIdx=()=>(new Date().getDay()+6)%7;
+const tree=(x,y,s=1)=>`<g transform="translate(${x},${y}) scale(${s})"><rect x="-1.5" y="-8" width="3" height="8" fill="#8B6B4A"/><circle cx="0" cy="-13" r="7" fill="#6BBF7A"/><circle cx="-4" cy="-10" r="4.5" fill="#5FB36F"/></g>`;
+const pine=(x,s=1,c='#3E8E5A')=>`<g transform="translate(${x},42) scale(${s})"><rect x="-1" y="-4" width="2" height="4" fill="#8B6B4A"/><path d="M0 -26l7 12h-14zM0 -18l8 12h-16z" fill="${c}"/></g>`;
+const cloud=(x,y,c='#fff')=>`<g fill="${c}" opacity=".9"><ellipse cx="${x}" cy="${y}" rx="11" ry="4"/><ellipse cx="${x+8}" cy="${y-2}" rx="7" ry="4"/></g>`;
+const dot=(x,y,c)=>`<circle cx="${x}" cy="${y}" r="1.6" fill="${c}"/>`;
+const SCENES=[ // a different scene for each day's hole
+ {name:'Meadow',sky:'#E3F3FF',ground:'#CBE8C4',art:cloud(100,24)+cloud(300,22)+tree(56,42)+tree(350,42,1.15)+dot(110,58,'#F9A8D4')+dot(140,60,'#FDE047')+dot(262,59,'#F9A8D4')+dot(300,58,'#FDE047')+dot(330,60,'#fff')},
+ {name:'Pond',sky:'#E8F5FF',ground:'#C7E6C2',art:cloud(310,24)+tree(36,42)+tree(372,42,.9)+'<ellipse cx="108" cy="58" rx="34" ry="5.5" fill="#8CCBF2"/><ellipse cx="300" cy="59" rx="30" ry="5" fill="#8CCBF2"/><path d="M76 57v-9M81 57v-7M322 58v-8M327 58v-10" stroke="#7BAA6A" stroke-width="1.2"/><circle cx="112" cy="57" r="2.4" fill="#FDE68A"/>'},
+ {name:'Bunker',sky:'#EAF6FF',ground:'#CFE9C7',art:cloud(120,24)+pine(52,.9,'#4FA36B')+tree(352,42)+'<ellipse cx="132" cy="58" rx="30" ry="5" fill="#F1DFAE"/><ellipse cx="270" cy="58" rx="26" ry="5" fill="#F1DFAE"/><path d="M118 56l16 3M258 56l16 3" stroke="#D9C58F" stroke-width="1"/>'},
+ {name:'Hills',sky:'#E6F0FF',ground:'#CFE8C8',art:'<path d="M0 36Q50 12 110 28T230 24T340 28T400 22V36Z" fill="#BFE0BC"/><path d="M0 36Q70 22 150 32T300 30T400 32V36Z" fill="#A9D5A6"/><path d="M336 36l2-14h4l2 14z" fill="#E9DCC3"/><path d="M340 22l-9-5M340 22l9 5M340 22l-5 9M340 22l5-9" stroke="#9CA3AF" stroke-width="1.2"/>'+cloud(90,24)},
+ {name:'Forest',sky:'#E7F4EC',ground:'#C6E3BC',art:[16,42,70,96,300,330,358,384].map((x,i)=>pine(x,i%2?1.1:.9,i%2?'#3E8E5A':'#4FA36B')).join('')+dot(150,59,'#F87171')+dot(250,58,'#F87171')},
+ {name:'Beach',sky:'#DDF2FF',ground:'#F4E4BC',art:'<rect y="26" width="400" height="10" fill="#86CBF2"/><path d="M10 31q8-3 16 0t16 0M180 30q8-3 16 0t16 0M300 33q8-3 16 0t16 0" stroke="#fff" stroke-opacity=".7" fill="none"/><circle cx="372" cy="14" r="6" fill="#FCD34D"/><path d="M56 46q4-14 2-22" stroke="#8B6B4A" stroke-width="2.2" fill="none"/><path d="M58 24q-10-2-14 6M58 24q10-4 15 3M58 24q-3-9-12-9M58 24q5-8 14-6" stroke="#4FA36B" stroke-width="2.2" fill="none" stroke-linecap="round"/><path d="M326 40a14 10 0 0 1 28 0z" fill="#F87171"/><path d="M340 40v10" stroke="#78736D"/>'},
+ {name:'Sunset',sky:'url(#sg)',ground:'#C9DDB3',defs:'<linearGradient id="sg" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FFE3B0"/><stop offset="1" stop-color="#FFB8A5"/></linearGradient>',art:'<circle cx="300" cy="32" r="10" fill="#FFB454"/><path d="M0 36Q60 20 130 30T260 28T400 24V36Z" fill="#E0A58F"/>'+cloud(90,22,'#FFE8E0')+cloud(230,26,'#FFE8E0')+tree(50,42)+tree(346,42,1.1)}
+];
+const AHEAD=17,HX=200,GY=50,START={Hanna:24,Ryan:376},DIR={Hanna:1,Ryan:-1}; // Hanna walks right, Ryan walks left, hole in the middle
 const golfer=o=>`<g><circle cx="0" cy="-15" r="6" fill="#FFE0BD"/><path d="M-6.3 -15.5a6.3 6.3 0 0 1 12.6 0z" fill="${o.hair}"/><path d="M-1 -19.5h9" stroke="${o.shirt}" stroke-width="2" stroke-linecap="round"/><circle cx="-2.2" cy="-14" r=".9" fill="#2C2A29"/><circle cx="2.2" cy="-14" r=".9" fill="#2C2A29"/><path d="M-1 -11.5q1 1 2 0" stroke="#C2410C" stroke-width=".8" fill="none"/><rect x="-4.5" y="-9" width="9" height="8" rx="3" fill="${o.shirt}"/><path d="M-2 -1v5M2 -1v5" stroke="#2C2A29" stroke-width="2" stroke-linecap="round"/><g transform="translate(4,-5)"><g class="club"><path d="M0 0l10 8" stroke="#78736D" stroke-width="1.6" stroke-linecap="round"/></g></g></g>`;
-let lastP={},lastK={},tele={},pend={};
+let lastP={},builtDay=-1;
 function buildGolf(){
-  lastP={};lastK={};tele={};pend={};const L=LAYOUTS[golfStyle],N=HOLES(),sp=Math.min(13,125/N);
-  const flags=L.holes.map(([w,x,y])=>`<circle cx="${x}" cy="${y}" r="4.5" fill="#2C2A29"/><path d="M${x} ${y}v-22" stroke="#78736D" stroke-width="1.3"/><path d="M${x} ${y-22}l11 4.5-11 4.5z" fill="${w?GOLF[w].shirt:'#EF4444'}"/>`).join('');
-  const lines=WHO.map(w=>{const o=L.g[w];return `<line x1="${o.s}" x2="${o.h}" y1="${o.y}" y2="${o.y}" stroke="#B7D9BE" stroke-width="2" stroke-dasharray="3 4"/>`}).join('');
-  const labels=WHO.map((w,i)=>`<text id="lb-${w}" x="${6+i*112}" y="9" font-size="8" font-weight="700" fill="${GOLF[w].shirt}"></text>`).join('');
-  const dots=Array.from({length:N},(_,i)=>`<circle id="hd-${i}" cx="${248+i*sp}" cy="8" r="${Math.min(4,sp/2-1)}" fill="#D1D5DB"/>`).join('');
-  const actors=WHO.map(w=>{const o=L.g[w],G=GOLF[w];return `<g transform="translate(0,${o.y})"><g id="bl-${w}" class="bl" style="transform:translateX(${o.s+AHEAD}px)"><g class="arc"><circle cx="0" cy="-2.6" r="2.6" fill="#fff" stroke="#9CA3AF" stroke-width=".8"/></g></g></g><g transform="translate(0,${o.y-4})"><g id="gf-${w}" class="gf" style="transform:translateX(${o.s}px)">${golfer(G)}</g></g>`}).join('');
-  $('golf').innerHTML=`<svg viewBox="0 0 400 64" class="w-full h-full" aria-hidden="true"><rect width="400" height="64" rx="16" fill="#EEF7EF"/>${labels}${dots}${lines}${flags}${actors}</svg>`;
+  lastP={};builtDay=todayIdx();const sc=SCENES[builtDay];
+  const labels=WHO.map(w=>{const l=w==='Hanna';return `<text id="lb-${w}" x="${l?6:394}" y="9" text-anchor="${l?'start':'end'}" font-size="8" font-weight="700" fill="${GOLF[w].shirt}"></text>`}).join('');
+  const dots=Array.from({length:7},(_,i)=>`<circle id="hd-${i}" cx="${200+(i-3)*12}" cy="8" r="3.4" fill="#D1D5DB" ${i===builtDay?'stroke="#2C2A29" stroke-width="1"':''}/>`).join('');
+  const hole=`<circle cx="${HX}" cy="${GY}" r="4.5" fill="#2C2A29"/><path d="M${HX} ${GY}v-22" stroke="#6B7280" stroke-width="1.3"/><path d="M${HX} ${GY-22}l11 4.5-11 4.5z" fill="#EF4444"/>`;
+  const actors=WHO.map(w=>{const G=GOLF[w],s0=START[w],d=DIR[w];return `<g transform="translate(0,${GY})"><g id="bl-${w}" class="bl" style="transform:translateX(${s0+d*AHEAD}px)"><g class="arc"><circle cx="0" cy="-2.6" r="2.6" fill="#fff" stroke="#9CA3AF" stroke-width=".8"/></g></g></g><g transform="translate(0,${GY-4})"><g id="gf-${w}" class="gf" style="transform:translateX(${s0}px)"><g transform="scale(${d},1)">${golfer(G)}</g></g></g>`}).join('');
+  $('golf').innerHTML=`<svg viewBox="0 0 400 64" class="w-full h-full" aria-hidden="true"><defs><clipPath id="cp"><rect width="400" height="64" rx="16"/></clipPath>${sc.defs||''}</defs><g clip-path="url(#cp)"><rect width="400" height="64" fill="${sc.sky}"/><path d="M0 36H400V64H0z" fill="${sc.ground}"/>${sc.art}<line x1="24" x2="376" y1="${GY}" y2="${GY}" stroke="#fff" stroke-opacity=".7" stroke-width="2" stroke-dasharray="3 4"/>${hole}${actors}</g><text x="200" y="20" text-anchor="middle" font-size="7" fill="#6B7280">${DAYN[builtDay]} \u00b7 ${sc.name}</text>${labels}${dots}</svg>`;
 }
 function swing(w){
   const pairs=[[document.querySelector('#gf-'+w+' .club'),'sw'],[document.querySelector('#bl-'+w+' .arc'),'fly']];
   pairs.forEach(([el,cls])=>{if(!el)return;el.classList.remove(cls);void el.getBoundingClientRect();el.classList.add(cls)});
 }
 function renderGolf(){
-  const L=LAYOUTS[golfStyle],N=HOLES(),say=[],svg=$('golf')&&$('golf').firstElementChild,first=!Object.keys(lastK).length;
+  if(builtDay!==todayIdx())buildGolf(); // new day, new scenery, back to the tee
+  const svg=$('golf')&&$('golf').firstElementChild,first=!Object.keys(lastP).length,say=[];
   if(first&&svg)svg.classList.add('init');
   WHO.forEach(w=>{
-    const o=L.g[w],st=holeState(w),p=prog(w),g=$('gf-'+w),b=$('bl-'+w),lab=$('lb-'+w);if(!g||!b)return;
-    const lv=level(w);say.push(`${w} level ${lv.L}, hole ${st.hole} of ${N}`);
-    if(lab)lab.textContent=`${w} Lv ${lv.L} \u00b7 ${st.k>=N?'Finished':'Hole '+st.hole}`;
-    const place=f=>{const x=o.s+f*(o.h-o.s-AHEAD);g.style.transform=`translateX(${x}px)`;b.style.transform=`translateX(${x+AHEAD}px)`;b.style.opacity=f>=1?0:1};
-    if(!pend[w]){
-      if(lastK[w]!==undefined&&st.k>lastK[w]){ // finished a hole: ball drops in, then back to the tee for the next one
-        place(1);swing(w);pend[w]=true;clearTimeout(tele[w]);
-        tele[w]=setTimeout(()=>{pend[w]=false;const s2=holeState(w);if(s2.k>=N)return;[g,b].forEach(e=>e.classList.add('na'));place(s2.f);void g.getBoundingClientRect();[g,b].forEach(e=>e.classList.remove('na'))},2600);
-      }else{place(st.f);if(lastP[w]!==undefined&&p>lastP[w])swing(w)}
-    }
-    lastK[w]=st.k;lastP[w]=p});
-  const hw=holeWinners();for(let i=0;i<N;i++){const d=$('hd-'+i);if(d)d.setAttribute('fill',hw[i]?GOLF[hw[i]].shirt:'#D1D5DB')}
+    const f=dayProg(w),g=$('gf-'+w),b=$('bl-'+w),lab=$('lb-'+w);if(!g||!b)return;
+    const lv=level(w),x=START[w]+DIR[w]*f*(Math.abs(HX-START[w])-AHEAD);
+    say.push(`${w} level ${lv.L}, ${Math.round(f*100)} percent of today`);
+    if(lab)lab.textContent=`${w} Lv ${lv.L} \u00b7 ${Math.round(f*100)}%`;
+    g.style.transform=`translateX(${x}px)`;b.style.transform=`translateX(${x+DIR[w]*AHEAD}px)`;b.style.opacity=f>=1?0:1;
+    if(lastP[w]!==undefined&&f>lastP[w])swing(w);
+    lastP[w]=f});
+  holeWinners().forEach((r,i)=>{const d=$('hd-'+i);if(d)d.setAttribute('fill',r==='tie'?'#FBBF24':r?GOLF[r].shirt:'#D1D5DB')});
   if(first&&svg)requestAnimationFrame(()=>requestAnimationFrame(()=>svg.classList.remove('init')));
-  const g=$('golf');if(g)g.setAttribute('aria-label','Weekly golf: '+say.join('; ')+'. Open scoreboard.');
+  const gl=$('golf');if(gl)gl.setAttribute('aria-label','Today\'s golf hole: '+say.join('; ')+'. Open scoreboard.');
 }
-function setGolfStyle(v){golfStyle=LAYOUTS[v]?v:'same';try{localStorage.setItem('sl_golfstyle',golfStyle)}catch{}buildGolf();renderGolf()}
-function setHoles(){rewards.n=Math.max(3,Math.min(12,Math.floor(+$('rw-n').value)||6));save();buildGolf();renderGolf()}
+function listNote(){
+  const a=possible('Hanna'),b=possible('Ryan'),hi=Math.max(a,b),lo=Math.min(a,b);
+  if(!lo||hi/lo<1.15||rewards.equal)return'';
+  return `${a<b?'Hanna':'Ryan'} has the shorter list, so each chore swings further and fewer chores finish a hole.`;
+}
+function setEqual(v){rewards.equal=!!v;save();buildGolf();renderGolf();openScore()}
 function openScore(){
   const wk=weekKey(new Date()),r1=x=>Math.round(x*10)/10;
-  const bars=WHO.map(w=>`<div class="mb-3"><div class="flex justify-between text-xs font-bold mb-1"><span>${w}</span><span>${r1(earned(w))} / ${r1(possible(w))} pts &middot; ${pct(w)}%</span></div><div class="h-3 bg-warm-subtle rounded-full overflow-hidden"><div class="h-full rounded-full" style="width:${pct(w)}%;background:${GOLF[w].shirt}"></div></div></div>`).join('');
-  const hw=holeWinners(),cnt=WHO.map(w=>hw.filter(x=>x===w).length);
-  const holesRow=`<div class="flex items-center gap-1 mb-3 text-xs"><span class="font-bold mr-1">Holes</span>${hw.map(x=>`<span class="inline-block w-4 h-4 rounded-full" style="background:${x?GOLF[x].shirt:'#D1D5DB'}"></span>`).join('')}<span class="ml-2 text-warm-muted">Hanna ${cnt[0]} \u2013 ${cnt[1]} Ryan</span></div>`;
+  const bars=WHO.map(w=>`<div class="mb-3"><div class="flex justify-between text-xs font-bold mb-1"><span>${w}</span><span>${r1(earned(w))} / ${r1(basis(w))} pts &middot; ${pct(w)}%</span></div><div class="h-3 bg-warm-subtle rounded-full overflow-hidden"><div class="h-full rounded-full" style="width:${pct(w)}%;background:${GOLF[w].shirt}"></div></div></div>`).join('');
+  const hwAll=holeWinners(),hwFin=holeWinners(wk,true),ti=todayIdx(),cnt=WHO.map(w=>wonCount(hwFin,w));
+  const holesRow=`<div class="flex items-center gap-1.5 mb-1 text-xs"><span class="font-bold mr-1">Holes</span>${hwAll.map((x,i)=>`<span class="flex flex-col items-center text-[9px] text-warm-muted"><span class="inline-block w-5 h-5 rounded-full ${i===ti?'ring-2 ring-warm-text':''}" style="background:${x==='tie'?'#FBBF24':x?GOLF[x].shirt:'#D1D5DB'}"></span>${DAYN[i][0]}</span>`).join('')}<span class="ml-2 text-warm-muted">Hanna ${cnt[0]} \u2013 ${cnt[1]} Ryan</span></div><p class="text-[10px] text-warm-muted mb-3">One hole a day, won by whoever finishes a bigger share of their own day. Today: Hanna ${Math.round(dayProg('Hanna')*100)}%, Ryan ${Math.round(dayProg('Ryan')*100)}%. Today's hole is decided at midnight (amber = tie).</p>`;
   const lvls=WHO.map(w=>{const v=level(w),pc=Math.round((v.h-v.from)/(v.to-v.from)*100);return `<div class="flex-1 p-3 rounded-2xl border border-warm-border"><div class="flex justify-between text-xs font-bold"><span style="color:${GOLF[w].shirt}">${w}</span><span>Level ${v.L}</span></div><div class="h-2 bg-warm-subtle rounded-full overflow-hidden my-1.5"><div class="h-full rounded-full" style="width:${pc}%;background:${GOLF[w].shirt}"></div></div><div class="text-[10px] text-warm-muted">${v.h} holes won \u00b7 ${v.to-v.h} more for Level ${v.L+1}</div></div>`}).join('');
   const bal=WHO.map(w=>`<div class="flex-1 p-3 rounded-2xl bg-warm-subtle border border-warm-border text-center"><div class="text-[10px] font-bold uppercase text-warm-muted">${w}</div><div class="text-2xl font-display font-bold">${rewards.bal[w]||0}</div><div class="text-[10px] text-warm-muted">reward points</div></div>`).join('');
   const hist=rewards.hist.slice(0,5).map(h=>`<li>Week of ${esc(h.week)}: ${esc(h.winners.join(' & '))} won +${h.pts} (${h.holes?h.holes.join('\u2013')+' holes, ':''}${h.pct.join('% / ')}%)</li>`).join('')||'<li>No finished weeks yet.</li>';
@@ -592,8 +596,8 @@ function openScore(){
   const feed=log.filter(l=>l.week===wk).slice(-30).reverse().map(l=>`<li class="flex justify-between py-1 border-b border-warm-subtle"><span>${esc(l.who||'Someone')} did <b>${esc(l.text)}</b></span><span class="text-warm-muted">${esc(l.date.slice(5))} &middot; +${l.pts}</span></li>`).join('')||'<li class="py-1">Nothing yet this week.</li>';
   const IN='bg-warm-subtle border border-warm-border rounded-lg px-2 py-1.5 text-xs';
   openM(mh('Scoreboard')+`<h4 class="text-xs font-bold uppercase text-warm-muted mb-2">This week's race</h4>${bars}${holesRow}<div class="flex gap-3 mb-3">${lvls}</div>
-  <div class="flex items-center gap-2 text-xs mb-3">Holes per week <input id="rw-n" type="number" min="3" max="12" value="${HOLES()}" onchange="setHoles()" class="bg-warm-subtle border border-warm-border rounded-lg px-2 py-1.5 text-xs w-16"></div>
-  <div class="flex items-center gap-2 text-xs mb-3">Golf style <select onchange="setGolfStyle(this.value)" class="bg-warm-subtle border border-warm-border rounded-lg px-2 py-1.5 text-xs">${Object.keys(LAYOUTS).map(k=>`<option value="${k}" ${k===golfStyle?'selected':''}>${LAYOUTS[k].name}</option>`).join('')}</select></div>
+  <label class="flex items-center gap-2 text-xs mb-1"><input type="checkbox" ${rewards.equal?'checked':''} onchange="setEqual(this.checked)" class="rounded text-emerald-600"> Same-size holes for both (rewards doing more total work)</label>
+  <p class="text-[10px] text-warm-muted mb-3">Weekly chore lists: Hanna ${r1(possible('Hanna'))} pts, Ryan ${r1(possible('Ryan'))} pts. ${listNote()}</p>
   <div class="flex items-center gap-2 text-xs mb-3">Weekly winner prize <input id="rw-p" type="number" min="1" value="${rewards.prize}" onchange="setPrize()" class="${IN} w-20"> points</div>
   <div class="flex gap-3 mb-3">${bal}</div>
   <div class="flex flex-wrap items-center gap-2 text-xs mb-4"><select id="rw-w" class="${IN}">${WHO.map(w=>`<option>${w}</option>`).join('')}</select><input id="rw-t" placeholder="Reward (e.g. pick the movie)" maxlength="60" class="${IN} flex-1 min-w-[140px]"><input id="rw-c" type="number" min="1" placeholder="Cost" class="${IN} w-20">${B('bg-amber-600 text-white','redeem()','Redeem')}</div>
