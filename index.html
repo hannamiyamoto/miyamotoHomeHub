@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://api.trello.com https://api.open-meteo.com; frame-src https://calendar.google.com; img-src 'self' data:; base-uri 'none'; form-action 'none'">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline' https://cdn.tailwindcss.com; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; connect-src https://api.trello.com https://api.open-meteo.com https://script.google.com https://script.googleusercontent.com; frame-src https://calendar.google.com; img-src 'self' data:; base-uri 'none'; form-action 'none'">
 <meta name="robots" content="noindex, nofollow, noarchive">
 <meta name="referrer" content="no-referrer">
 <title>Family Command Center v3</title>
@@ -62,6 +62,7 @@ button{cursor:pointer}.drag{cursor:grab}
             <div class="flex bg-warm-subtle p-1 rounded-xl gap-1">
               <button data-freq="daily" onclick="chFreq='daily';renderChores()">Daily</button>
               <button data-freq="weekly" onclick="chFreq='weekly';renderChores()">Weekly</button>
+              <button data-freq="often" onclick="chFreq='often';renderChores()">Less often</button>
             </div>
             <div class="flex gap-1.5">
               <button data-who="ALL" onclick="chWho='ALL';renderChores()">All</button>
@@ -92,7 +93,8 @@ button{cursor:pointer}.drag{cursor:grab}
         </div>
         <div class="flex-1 overflow-hidden rounded-xl border border-warm-border relative bg-warm-subtle">
           <iframe id="cal-frame" title="Today's schedule" class="w-full h-full hidden" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe>
-          <div id="cal-empty" class="absolute inset-0 flex flex-col items-center justify-center text-warm-muted text-xs font-bold text-center px-4">Calendar not linked yet.<br>Open Settings and paste your Google Calendar embed link.</div>
+          <div id="cal-list" class="absolute inset-0 overflow-y-auto p-2 hidden"></div>
+          <div id="cal-empty" class="absolute inset-0 flex flex-col items-center justify-center text-warm-muted text-xs font-bold text-center px-4">Calendar not linked yet.<br>Open Settings to connect your calendar.</div>
         </div>
       </div>
       <div class="h-1/2 flex flex-col card rounded-3xl p-5 overflow-hidden">
@@ -151,6 +153,7 @@ home:'<path d="m3 9 9-7 9 7v11a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/><path d="M9 22V1
 cart:'<circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2 2h2l2.7 12.4a2 2 0 0 0 2 1.6h9.8a2 2 0 0 0 2-1.6L22 7H5"/>',
 book:'<path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20"/>',
 sliders:'<path d="M4 8h16M4 16h16"/><circle cx="9" cy="8" r="2" fill="#fff"/><circle cx="15" cy="16" r="2" fill="#fff"/>',
+left:'<path d="m15 18-6-6 6-6"/>',right:'<path d="m9 18 6-6-6-6"/>',
 swap:'<path d="m16 3 4 4-4 4"/><path d="M20 7H4"/><path d="m8 21-4-4 4-4"/><path d="M4 17h16"/>',
 grip:'<circle cx="9" cy="6" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="18" r="1"/><circle cx="15" cy="6" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="18" r="1"/>',
 plus:'<path d="M5 12h14M12 5v14"/>',x:'<path d="M18 6 6 18M6 6l12 12"/>',
@@ -212,10 +215,11 @@ const safe=(w,f)=>{try{f()}catch(e){oops(w,e)}};
 const arr=v=>Array.isArray(v)?v:[];
 const obj=v=>v&&typeof v==='object'&&!Array.isArray(v);
 const str=v=>typeof v==='string'?v:(obj(v)?String(v.name||v.text||v.item||''):String(v??''));
+const okDate=v=>/^\d{4}-\d{2}-\d{2}$/.test(v)?v:'';
 const sid=(v,p,i)=>String(v||p+Date.now()+i).replace(/[^\w-]/g,'');
 function clean(){
   recipes=arr(recipes).filter(obj).map((r,i)=>({id:sid(r.id,'r',i),title:str(r.title)||'Untitled',link:safeUrl(r.link),ingredients:arr(r.ingredients).map(str).filter(Boolean),instructions:arr(r.instructions).map(str).filter(Boolean)}));
-  chores=arr(chores).filter(obj).map((c,i)=>({id:sid(c.id,'c',i),text:str(c.text||c.title),assignees:arr(c.assignees).map(str),frequency:c.frequency==='weekly'?'weekly':'daily',days:arr(c.days).map(str),points:Math.max(1,Math.min(10,+c.points||1)),done:!!c.done}));
+  chores=arr(chores).filter(obj).map((c,i)=>({id:sid(c.id,'c',i),text:str(c.text||c.title),assignees:arr(c.assignees).map(str),frequency:c.frequency==='weekly'?'weekly':c.frequency==='often'?'often':'daily',every:Math.max(2,Math.min(365,Math.floor(+c.every)||30)),nextDue:okDate(c.nextDue),lastDone:okDate(c.lastDone),prevDue:okDate(c.prevDue),prevLast:okDate(c.prevLast),days:arr(c.days).map(str),points:Math.max(1,Math.min(10,+c.points||1)),done:!!c.done}));
   tasks=arr(tasks).filter(obj).map((t,i)=>({id:sid(t.id,'t',i),text:str(t.text),assignee:str(t.assignee)||'Unassigned',done:!!t.done,synced:!!t.synced,cardId:t.cardId?String(t.cardId).replace(/[^\w-]/g,''):''}));
   manual=arr(manual).filter(obj).map((m,i)=>({id:sid(m.id,'m',i),text:str(m.text),checked:!!m.checked}));
   skipG=arr(skipG).map(str);checked=arr(checked).map(str);pushed=arr(pushed).map(str);
@@ -236,6 +240,13 @@ function save(){
 const dayName=()=>new Date().toLocaleDateString('en-US',{weekday:'long'});
 const dayKey=d=>d.toLocaleDateString('en-CA');
 const weekKey=d=>{const m=new Date(d);m.setDate(m.getDate()-(m.getDay()+6)%7);return dayKey(m)}; // weeks start Monday
+const addDays=(dk,n)=>{const d=new Date(dk+'T12:00:00');d.setDate(d.getDate()+n);return dayKey(d)};
+const syncOften=()=>{const tk=dayKey(new Date());chores.forEach(c=>{if(c.frequency==='often')c.done=c.lastDone===tk})};
+const dueTag=c=>{
+  const tk=dayKey(new Date()),d=Math.round((new Date((c.nextDue||tk)+'T12:00:00')-new Date(tk+'T12:00:00'))/864e5);
+  const t=c.done?`Next in ${d}d`:d<0?`Overdue ${-d}d`:d===0?'Due today':`Due in ${d}d`;
+  return `<span class="ml-2 text-[10px] font-semibold ${!c.done&&d<=0?'text-rose-600':'text-warm-muted'}">${t}</span>`;
+};
 function autoReset(){
   const n=new Date(),dk=dayKey(n),wk=weekKey(n);let ch=false;
   if(meta.day!==dk){chores.forEach(c=>{if(c.frequency==='daily')c.done=false});meta.day=dk;ch=true}
@@ -274,7 +285,9 @@ const CANCEL=B('bg-warm-subtle','closeM()','Cancel');
 function openSettings(){
   const sec=(id,l,k)=>inp(id,l,'','password',cfg(k)?'Saved. Leave blank to keep.':'');
   openM(mh('Settings')+`<div class="space-y-3">
-    ${inp('s-cal','Google Calendar embed link',cfg('g_embed'),'text','https://calendar.google.com/calendar/embed?src=...')}
+    ${inp('s-cu','Calendar feed link (works on iPad)',cfg('cal_url'),'text','https://script.google.com/macros/s/.../exec')}${sec('s-ct','Calendar feed passcode','cal_token')}
+    <p class="text-[10px] text-warm-muted">Fill these in to show today's events, guests and a month view without signing in to Google. The embed link below is the older option.</p>
+    ${inp('s-cal','Google Calendar embed link (older option)',cfg('g_embed'),'text','https://calendar.google.com/calendar/embed?src=...')}
     <hr class="border-warm-border">
     ${sec('s-tk','Trello API key','t_api')}${sec('s-tt','Trello token','t_token')}
     ${inp('s-gl','Trello grocery list ID',cfg('t_groc_list'))}${inp('s-tl','Trello tasks list ID',cfg('t_task_list'))}
@@ -283,13 +296,16 @@ function openSettings(){
 }
 function saveSettings(){
   const put=(k,id)=>{const v=$(id).value.trim();if(v)localStorage.setItem('cfg_'+k,v)};
+  const cu=$('s-cu').value.trim();
+  if(cu&&!/^https:\/\/script\.google\.com\/macros\/s\/[\w-]+\/exec$/.test(cu))return alert('The calendar feed link should look like https://script.google.com/macros/s/.../exec');
+  localStorage.setItem('cfg_cal_url',cu);put('cal_token','s-ct');
   put('t_api','s-tk');put('t_token','s-tt');
   localStorage.setItem('cfg_t_groc_list',$('s-gl').value.trim());localStorage.setItem('cfg_t_task_list',$('s-tl').value.trim());
   const c=$('s-cal').value.trim();
   if(c&&!calUrl('MONTH',c)){return alert('That does not look like a Google Calendar embed link (it should start with https://calendar.google.com/calendar/embed).')}
   localStorage.setItem('cfg_g_embed',c);closeM();setupCal();
 }
-function wipeKeys(){if(confirm('Remove Trello key and token from this device?')){['t_api','t_token'].forEach(k=>localStorage.removeItem('cfg_'+k));closeM()}}
+function wipeKeys(){if(confirm('Remove the Trello and calendar keys from this device?')){['t_api','t_token','cal_token'].forEach(k=>localStorage.removeItem('cfg_'+k));closeM()}}
 
 /* ---------- calendar ---------- */
 function calUrl(mode,raw=cfg('g_embed')){
@@ -298,11 +314,14 @@ function calUrl(mode,raw=cfg('g_embed')){
   u.searchParams.set('mode',mode);u.searchParams.set('ctz',Intl.DateTimeFormat().resolvedOptions().timeZone);return u.href}catch{return''}
 }
 function setupCal(){
-  const f=$('cal-frame'),u=calUrl('AGENDA');
+  const f=$('cal-frame'),l=$('cal-list'),u=calUrl('AGENDA');
+  if(feedOn()){f.removeAttribute('src');f.classList.add('hidden');$('cal-empty').classList.add('hidden');l.classList.remove('hidden');loadToday();return}
+  l.classList.add('hidden');
   if(u){f.src=u+'&showTitle=0&showNav=0&showDate=0&showPrint=0&showTabs=0&showCalendars=0&showTz=0';f.classList.remove('hidden');$('cal-empty').classList.add('hidden')}
   else{f.removeAttribute('src');f.classList.add('hidden');$('cal-empty').classList.remove('hidden')}
 }
 function openCal(){
+  if(feedOn())return openMonth(0);
   const u=calUrl('MONTH');if(!u)return alert('Add your Google Calendar embed link in Settings first.');
   openM(`<div class="flex flex-col h-full">${mh('Calendar')}<iframe title="Month calendar" src="${esc(u)}" class="flex-1 rounded-xl border border-warm-border" style="border:0" referrerpolicy="no-referrer" sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"></iframe></div>`,'max-w-6xl h-[85vh]');
 }
@@ -313,26 +332,33 @@ function renderChores(){
   document.querySelectorAll('[data-freq]').forEach(b=>b.className=SEG+(b.dataset.freq===chFreq?'bg-white shadow-sm':'text-warm-muted'));
   document.querySelectorAll('[data-who]').forEach(b=>b.className='px-3 py-1 rounded-xl text-xs font-bold '+(b.dataset.who===chWho?'bg-emerald-600 text-white':'border border-warm-border bg-white text-warm-muted'));
   const today=dayName();
-  let l=chores.filter(c=>chFreq==='daily'?(c.frequency==='daily'||c.days.includes(today)):c.frequency==='weekly');
+  syncOften();const tk=dayKey(new Date());
+  let l=chores.filter(c=>chFreq==='daily'?(c.frequency==='daily'||c.days.includes(today)||(c.frequency==='often'&&(c.done||(c.nextDue||tk)<=tk))):chFreq==='weekly'?c.frequency==='weekly':c.frequency==='often');
   if(chWho!=='ALL')l=l.filter(c=>c.assignees.includes(chWho));
-  l.sort((a,b)=>a.done-b.done);
+  l.sort((a,b)=>(a.done-b.done)||(chFreq==='often'?(a.nextDue||'').localeCompare(b.nextDue||''):0));
   $('chores').innerHTML=l.length?l.map(c=>`<div class="p-3 rounded-2xl bg-white border border-warm-border flex justify-between items-center ${c.done?'opacity-50':''}" data-id="${c.id}">${GRIP}
     <label class="flex items-center gap-3 flex-1 cursor-pointer"><input type="checkbox" ${c.done?'checked':''} onchange="toggleChore('${c.id}')" class="w-6 h-6 rounded text-emerald-600 focus:ring-0">
-    <span class="text-sm font-bold ${c.done?'line-through text-warm-muted':''}">${esc(c.text)}${c.frequency==='weekly'?`<span class="ml-2 text-[10px] font-semibold text-warm-muted">${esc(c.days[0]||'Any day')}</span>`:''}${c.points>1?`<span class="ml-2 text-[10px] font-semibold text-amber-600">${c.points} pts</span>`:''}</span></label>
+    <span class="text-sm font-bold ${c.done?'line-through text-warm-muted':''}">${esc(c.text)}${c.frequency==='weekly'?`<span class="ml-2 text-[10px] font-semibold text-warm-muted">${esc(c.days[0]||'Any day')}</span>`:''}${c.points>1?`<span class="ml-2 text-[10px] font-semibold text-amber-600">${c.points} pts</span>`:''}${c.frequency==='often'?dueTag(c):''}</span></label>
     <div class="flex items-center gap-1.5">${creditChip(c)}${c.assignees.map(a=>`<span class="text-[10px] font-bold px-2 py-1 rounded-lg border ${a==='Ryan'?'bg-blue-50 text-blue-700':'bg-emerald-50 text-emerald-700'}">${esc(a)}</span>`).join('')}
     <button onclick="delChore('${c.id}')" aria-label="Delete chore" class="ml-1 text-warm-muted hover:text-rose-500">${ic('trash',15)}</button></div></div>`).join(''):'<p class="text-xs text-warm-muted p-2 text-center">No chores match this view.</p>';
 }
+function completeChore(c,who){
+  if(c.frequency==='often'){const tk=dayKey(new Date());c.prevDue=c.nextDue;c.prevLast=c.lastDone;c.lastDone=tk;c.nextDue=addDays(tk,c.every||30)} // next one is due N days from today
+  c.done=true;logIt(c,who);save();
+}
 function toggleChore(id){
-  const c=chores.find(x=>x.id===id);if(!c)return;
-  if(c.done){c.done=false;undoLog(c);save();return}
+  const c=chores.find(x=>x.id===id);if(!c)return;syncOften();
+  if(c.done){if(c.frequency==='often'){c.nextDue=c.prevDue||c.nextDue;c.lastDone=c.prevLast||''}c.done=false;undoLog(c);save();return}
   if(c.assignees.length>1){askWho(c);return}
-  c.done=true;logIt(c,c.assignees[0]||'');save();
+  completeChore(c,c.assignees[0]||'');
 }
 function delChore(id){if(confirm('Delete this chore?')){chores=chores.filter(x=>x.id!==id);save()}}
+function freqChange(v){$('c-dw').style.display=v==='weekly'?'block':'none';$('c-of').style.display=v==='often'?'block':'none'}
 function openChore(){
   openM(mh('Add Chore')+`<div class="space-y-4">${inp('c-t','Chore name','','text')}
-    <div><label class="block text-xs font-bold mb-1" for="c-f">Frequency</label><select id="c-f" onchange="$('c-dw').style.display=this.value==='weekly'?'block':'none'" class="w-full bg-warm-subtle border border-warm-border rounded-xl px-3 py-2 text-xs"><option value="daily">Daily</option><option value="weekly">Weekly</option></select></div>
+    <div><label class="block text-xs font-bold mb-1" for="c-f">Frequency</label><select id="c-f" onchange="freqChange(this.value)" class="w-full bg-warm-subtle border border-warm-border rounded-xl px-3 py-2 text-xs"><option value="daily">Daily</option><option value="weekly">Weekly</option><option value="often">Less often (every N days)</option></select></div>
     <div id="c-dw" style="display:none"><label class="block text-xs font-bold mb-1" for="c-d">Day</label><select id="c-d" class="w-full bg-warm-subtle border border-warm-border rounded-xl px-3 py-2 text-xs"><option value="">Any day this week</option>${DAYS.map(d=>`<option>${d}</option>`).join('')}</select></div>
+    <div id="c-of" style="display:none" class="space-y-3">${inp('c-n','Repeats every (days)','30','number')}${inp('c-due','First due',dayKey(new Date()),'date')}</div>
     <div><label class="block text-xs font-bold mb-1" for="c-p">Points</label><select id="c-p" class="w-full bg-warm-subtle border border-warm-border rounded-xl px-3 py-2 text-xs"><option value="1">1 (quick)</option><option value="2">2</option><option value="3">3 (big job)</option><option value="5">5 (huge)</option></select></div>
     <div class="flex gap-4 text-xs"><label class="flex items-center gap-2"><input type="checkbox" id="c-h" checked class="rounded text-emerald-600"> Hanna</label><label class="flex items-center gap-2"><input type="checkbox" id="c-r" checked class="rounded text-emerald-600"> Ryan</label></div></div>
     <div class="flex justify-end gap-2 mt-6">${CANCEL}${B('bg-emerald-600 text-white','saveChore()','Save Chore')}</div>`);
@@ -340,7 +366,7 @@ function openChore(){
 function saveChore(){
   const text=$('c-t').value.trim().slice(0,80),f=$('c-f').value,a=[];if($('c-h').checked)a.push('Hanna');if($('c-r').checked)a.push('Ryan');
   if(!text||!a.length)return;
-  chores.push({id:'c'+Date.now(),text,assignees:a,frequency:f,days:f==='weekly'&&$('c-d').value?[$('c-d').value]:[],points:+$('c-p').value||1,done:false});save();closeM();
+  chores.push({id:'c'+Date.now(),text,assignees:a,frequency:f,days:f==='weekly'&&$('c-d').value?[$('c-d').value]:[],points:+$('c-p').value||1,done:false,...(f==='often'?{every:Math.max(2,Math.min(365,Math.floor(+$('c-n').value)||30)),nextDue:okDate($('c-due').value)||dayKey(new Date()),lastDone:'',prevDue:'',prevLast:''}:{})});save();closeM();
 }
 
 /* ---------- Trello ---------- */
@@ -493,7 +519,7 @@ function delRecipe(){
 /* ---------- golf game, points and activity log ---------- */
 const WHO=['Hanna','Ryan'];
 const GOLF={Hanna:{y:26,shirt:'#10B981',hair:'#7C4A2D'},Ryan:{y:54,shirt:'#3B82F6',hair:'#2C2A29'}};
-const perWeek=c=>c.frequency==='daily'?7:1;
+const perWeek=c=>c.frequency==='daily'?7:c.frequency==='often'?7/(c.every||30):1; // a monthly chore adds about a quarter of its points to each week's goal
 // points a person can earn in a week; shared chores count half to each person
 const possible=w=>chores.reduce((t,c)=>c.assignees.includes(w)?t+(c.points||1)*perWeek(c)/c.assignees.length:t,0);
 const basis=w=>rewards.equal?(possible('Hanna')+possible('Ryan'))/2:possible(w); // own list, or the average of both lists in same-size mode
@@ -501,16 +527,20 @@ const earned=(w,wk=weekKey(new Date()))=>log.filter(l=>l.week===wk&&l.who===w).r
 const prog=(w,wk)=>{const p=basis(w);return p?Math.min(1,earned(w,wk)/p):0};
 const pct=w=>Math.round(prog(w)*100);
 function logIt(c,who){const n=new Date();log.push({id:'l'+Date.now(),cid:c.id,text:c.text,who,pts:c.points||1,date:dayKey(n),week:weekKey(n),ts:n.getTime()});log=log.slice(-1500)}
-function undoLog(c){const n=new Date(),dk=dayKey(n),wk=weekKey(n);for(let i=log.length-1;i>=0;i--){const l=log[i];if(l.cid===c.id&&(c.frequency==='daily'?l.date===dk:l.week===wk)){log.splice(i,1);break}}}
+function undoLog(c){const n=new Date(),dk=dayKey(n),wk=weekKey(n);for(let i=log.length-1;i>=0;i--){const l=log[i];if(l.cid===c.id&&(c.frequency==='weekly'?l.week===wk:l.date===dk)){log.splice(i,1);break}}}
 function askWho(c){
   openM(mh('Who did it?')+`<p class="text-sm mb-4">Who finished <b>${esc(c.text)}</b>?</p><div class="flex gap-3">${c.assignees.map(a=>`<button onclick="pick('${c.id}','${esc(a)}')" class="flex-1 py-4 rounded-2xl text-sm font-bold text-white" style="background:${(GOLF[a]||{}).shirt||'#10B981'}">${esc(a)}</button>`).join('')}</div><div class="flex justify-end mt-4">${B('bg-warm-subtle','closeM()','Cancel')}</div>`);
   renderChores();
 }
-function pick(id,who){const c=chores.find(x=>x.id===id);if(c&&!c.done){c.done=true;logIt(c,who);save()}closeM()}
+function pick(id,who){const c=chores.find(x=>x.id===id);if(c&&!c.done)completeChore(c,who);closeM()}
 // One hole per day. Both golfers play today's hole; at midnight it goes to whoever finished a bigger share of their own day.
 const dayDates=wk=>{const b=new Date(wk+'T12:00:00');return Array.from({length:7},(_,i)=>{const d=new Date(b);d.setDate(b.getDate()+i);return dayKey(d)})};
 const dayPts=(w,dk)=>log.filter(l=>l.date===dk&&l.who===w).reduce((t,l)=>t+l.pts,0);
-const dayProg=(w,dk=dayKey(new Date()))=>{const T=basis(w)/7;return T?Math.min(1,dayPts(w,dk)/T):0};
+function dayFills(w,wk){ // each day's hole fill (0 to 1); surplus points (up to one day's worth) roll into the next day
+  const T=basis(w)/7,dates=dayDates(wk);if(!T)return dates.map(()=>0);
+  let carry=0;return dates.map(dk=>{const a=dayPts(w,dk)+carry,fill=Math.min(a,T);carry=Math.min(a-fill,T);return fill/T}); // at most one day's worth carries forward
+}
+const dayProg=(w,dk=dayKey(new Date()))=>{const wk=weekKey(new Date(dk+'T12:00:00'));return dayFills(w,wk)[dayDates(wk).indexOf(dk)]||0};
 function dayResult(dk){const a=dayProg('Hanna',dk),b=dayProg('Ryan',dk);if(a<=0&&b<=0)return null;return a>b?'Hanna':b>a?'Ryan':'tie'}
 function holeWinners(wk=weekKey(new Date()),finalOnly=false){ // 7 results; finalOnly leaves out today
   const today=dayKey(new Date());return dayDates(wk).map(dk=>(dk>today||(finalOnly&&dk>=today))?null:dayResult(dk));
@@ -529,7 +559,7 @@ function closeWeek(wk){ // the week's winner (most holes) gets the prize; holes 
   win.forEach(w=>rewards.bal[w]=(rewards.bal[w]||0)+each);
   rewards.hist.unshift({week:wk,winners:win,pts:each,pct:a.map(x=>Math.round(x*100)),holes:wins});rewards.hist=rewards.hist.slice(0,26);
 }
-function logOf(c){const n=new Date(),dk=dayKey(n),wk=weekKey(n);for(let i=log.length-1;i>=0;i--){const l=log[i];if(l.cid===c.id&&(c.frequency==='daily'?l.date===dk:l.week===wk))return l}return null}
+function logOf(c){const n=new Date(),dk=dayKey(n),wk=weekKey(n);for(let i=log.length-1;i>=0;i--){const l=log[i];if(l.cid===c.id&&(c.frequency==='weekly'?l.week===wk:l.date===dk))return l}return null}
 const creditChip=c=>{const l=c.done&&logOf(c);return l&&l.who?`<button onclick="swapCredit('${c.id}')" class="text-[10px] font-bold px-2 py-1 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 flex items-center gap-1" aria-label="Change who gets the credit">by ${esc(l.who)} ${ic('swap',12)}</button>`:''};
 function swapCredit(id){const c=chores.find(x=>x.id===id),l=c&&logOf(c);if(!l||!WHO.includes(l.who))return;l.who=WHO[1-WHO.indexOf(l.who)];save()}
 
@@ -588,7 +618,7 @@ function openScore(){
   const wk=weekKey(new Date()),r1=x=>Math.round(x*10)/10;
   const bars=WHO.map(w=>`<div class="mb-3"><div class="flex justify-between text-xs font-bold mb-1"><span>${w}</span><span>${r1(earned(w))} / ${r1(basis(w))} pts &middot; ${pct(w)}%</span></div><div class="h-3 bg-warm-subtle rounded-full overflow-hidden"><div class="h-full rounded-full" style="width:${pct(w)}%;background:${GOLF[w].shirt}"></div></div></div>`).join('');
   const hwAll=holeWinners(),hwFin=holeWinners(wk,true),ti=todayIdx(),cnt=WHO.map(w=>wonCount(hwFin,w));
-  const holesRow=`<div class="flex items-center gap-1.5 mb-1 text-xs"><span class="font-bold mr-1">Holes</span>${hwAll.map((x,i)=>`<span class="flex flex-col items-center text-[9px] text-warm-muted"><span class="inline-block w-5 h-5 rounded-full ${i===ti?'ring-2 ring-warm-text':''}" style="background:${x==='tie'?'#FBBF24':x?GOLF[x].shirt:'#D1D5DB'}"></span>${DAYN[i][0]}</span>`).join('')}<span class="ml-2 text-warm-muted">Hanna ${cnt[0]} \u2013 ${cnt[1]} Ryan</span></div><p class="text-[10px] text-warm-muted mb-3">One hole a day, won by whoever finishes a bigger share of their own day. Today: Hanna ${Math.round(dayProg('Hanna')*100)}%, Ryan ${Math.round(dayProg('Ryan')*100)}%. Today's hole is decided at midnight (amber = tie).</p>`;
+  const holesRow=`<div class="flex items-center gap-1.5 mb-1 text-xs"><span class="font-bold mr-1">Holes</span>${hwAll.map((x,i)=>`<span class="flex flex-col items-center text-[9px] text-warm-muted"><span class="inline-block w-5 h-5 rounded-full ${i===ti?'ring-2 ring-warm-text':''}" style="background:${x==='tie'?'#FBBF24':x?GOLF[x].shirt:'#D1D5DB'}"></span>${DAYN[i][0]}</span>`).join('')}<span class="ml-2 text-warm-muted">Hanna ${cnt[0]} \u2013 ${cnt[1]} Ryan</span></div><p class="text-[10px] text-warm-muted mb-3">One hole a day, won by whoever finishes a bigger share of their own day. Up to one extra day's worth of points rolls into the next day. Today: Hanna ${Math.round(dayProg('Hanna')*100)}%, Ryan ${Math.round(dayProg('Ryan')*100)}%. Today's hole is decided at midnight (amber = tie).</p>`;
   const lvls=WHO.map(w=>{const v=level(w),pc=Math.round((v.h-v.from)/(v.to-v.from)*100);return `<div class="flex-1 p-3 rounded-2xl border border-warm-border"><div class="flex justify-between text-xs font-bold"><span style="color:${GOLF[w].shirt}">${w}</span><span>Level ${v.L}</span></div><div class="h-2 bg-warm-subtle rounded-full overflow-hidden my-1.5"><div class="h-full rounded-full" style="width:${pc}%;background:${GOLF[w].shirt}"></div></div><div class="text-[10px] text-warm-muted">${v.h} holes won \u00b7 ${v.to-v.h} more for Level ${v.L+1}</div></div>`}).join('');
   const bal=WHO.map(w=>`<div class="flex-1 p-3 rounded-2xl bg-warm-subtle border border-warm-border text-center"><div class="text-[10px] font-bold uppercase text-warm-muted">${w}</div><div class="text-2xl font-display font-bold">${rewards.bal[w]||0}</div><div class="text-[10px] text-warm-muted">reward points</div></div>`).join('');
   const hist=rewards.hist.slice(0,5).map(h=>`<li>Week of ${esc(h.week)}: ${esc(h.winners.join(' & '))} won +${h.pts} (${h.holes?h.holes.join('\u2013')+' holes, ':''}${h.pct.join('% / ')}%)</li>`).join('')||'<li>No finished weeks yet.</li>';
@@ -603,7 +633,12 @@ function openScore(){
   <div class="flex flex-wrap items-center gap-2 text-xs mb-4"><select id="rw-w" class="${IN}">${WHO.map(w=>`<option>${w}</option>`).join('')}</select><input id="rw-t" placeholder="Reward (e.g. pick the movie)" maxlength="60" class="${IN} flex-1 min-w-[140px]"><input id="rw-c" type="number" min="1" placeholder="Cost" class="${IN} w-20">${B('bg-amber-600 text-white','redeem()','Redeem')}</div>
   <h4 class="text-xs font-bold uppercase text-warm-muted mb-1">Past winners</h4><ul class="text-xs space-y-1 mb-4 list-disc pl-4">${hist}${spent}</ul>
   <h4 class="text-xs font-bold uppercase text-warm-muted mb-1">Activity this week</h4><ul class="text-xs mb-4 max-h-40 overflow-y-auto">${feed}</ul>
-  <div class="flex items-center gap-2">${B('bg-warm-subtle','backup()','Back up data')}<label class="px-4 py-2 rounded-xl text-xs font-bold bg-warm-subtle cursor-pointer">Restore backup<input type="file" accept=".json,application/json" class="hidden" onchange="restore(this)"></label><span class="text-[10px] text-warm-muted">Backups never include your Trello keys.</span></div>`,'max-w-2xl');
+  <div class="flex items-center gap-2">${B('bg-warm-subtle','backup()','Back up data')}<label class="px-4 py-2 rounded-xl text-xs font-bold bg-warm-subtle cursor-pointer">Restore backup<input type="file" accept=".json,application/json" class="hidden" onchange="restore(this)"></label>${B('bg-rose-50 text-rose-600','resetGolf()','Start golf over')}<span class="text-[10px] text-warm-muted">Backups never include your Trello keys.</span></div>`,'max-w-2xl');
+}
+function resetGolf(){ // wipes points, levels, hole results and the activity log; keeps chores, tasks, recipes and settings
+  if(!confirm('Start the golf game over?\n\nThis clears reward points, levels, hole results and the activity log, and unchecks every chore so you can earn them again. Your chores, tasks, recipes and settings stay.\n\nTip: tap Cancel and use "Back up data" first if you might want the old scores.'))return;
+  log=[];rewards.bal={};rewards.hist=[];rewards.spent=[];rewards.won={};chores.forEach(c=>c.done=false);
+  save();buildGolf();renderGolf();openScore();
 }
 function setPrize(){rewards.prize=Math.max(1,Math.min(999,Math.floor(+$('rw-p').value)||10));save()}
 function redeem(){
@@ -665,13 +700,75 @@ async function pullTrello(loud){
   finally{pulling=false}
 }
 
+/* ---------- calendar feed (your own Google Apps Script, so the iPad never signs in to Google) ---------- */
+const feedOn=()=>!!(cfg('cal_url')&&cfg('cal_token'));
+const tm=d=>d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit'});
+const toEv=e=>{
+  const all=!!e.a,P=v=>all?new Date(v+'T00:00:00'):new Date(v),st=P(e.s);let en=P(e.e);
+  if(all&&!(en>st)){en=new Date(st);en.setDate(en.getDate()+1)}
+  return{title:e.t||'(no title)',start:st,end:en,allDay:all,loc:e.l||'',desc:e.d||'',guests:arr(e.g),cal:e.c||''};
+};
+const evCache={};
+async function getEvents(from,to,guests){ // from/to are yyyy-mm-dd, "to" is exclusive
+  const key=from+'|'+to+'|'+(guests?1:0),hit=evCache[key];if(hit&&Date.now()-hit.t<60000)return hit.v;
+  const u=new URL(cfg('cal_url'));if(u.origin!=='https://script.google.com')throw new Error('The calendar link should start with https://script.google.com/');
+  u.searchParams.set('token',cfg('cal_token'));u.searchParams.set('from',from);u.searchParams.set('to',to);if(guests)u.searchParams.set('guests','1');
+  const r=await fetch(u.href);if(!r.ok)throw new Error('Calendar said '+r.status);
+  const j=await r.json();if(j.error)throw new Error(j.error);
+  const v=arr(j.events).map(toEv).sort((a,b)=>a.start-b.start);evCache[key]={t:Date.now(),v};return v;
+}
+const onDay=(ev,d)=>{const a=new Date(d);a.setHours(0,0,0,0);const b=new Date(a);b.setDate(b.getDate()+1);return ev.start<b&&(ev.end>a||ev.start>=a)};
+const byTime=(a,b)=>(b.allDay-a.allDay)||(a.start-b.start);
+const when=ev=>ev.allDay?'All day':`${tm(ev.start)} \u2013 ${tm(ev.end)}`;
+let shown=[],monthEvs=[],mOff=0;
+const evBtn=(ev,i)=>`<button onclick="openEvent(${i})" class="w-full text-left p-2.5 mb-1.5 rounded-xl bg-white border border-warm-border hover:border-blue-300"><div class="text-[10px] font-bold text-blue-700">${esc(when(ev))}</div><div class="text-sm font-bold leading-tight">${esc(ev.title)}</div>${ev.loc?`<div class="text-[11px] text-warm-muted truncate">${esc(ev.loc)}</div>`:''}${ev.guests.length?`<div class="text-[10px] text-warm-muted">${ev.guests.length} guest${ev.guests.length>1?'s':''}</div>`:''}</button>`;
+async function loadToday(){
+  const box=$('cal-list');if(!feedOn()||!box)return;
+  try{
+    const t=new Date();t.setHours(0,0,0,0);const n=new Date(t);n.setDate(n.getDate()+1);
+    shown=(await getEvents(dayKey(t),dayKey(n),true)).filter(e=>onDay(e,t)).sort(byTime);
+    box.innerHTML=shown.length?shown.map(evBtn).join(''):'<p class="text-xs text-warm-muted text-center pt-10 font-semibold">Nothing on the calendar today.</p>';
+  }catch(e){box.innerHTML=`<p class="text-xs text-rose-600 font-bold p-2">Could not load the calendar: ${esc(e.message)}</p>`}
+}
+function openEvent(i){
+  const ev=shown[i];if(!ev)return;
+  const day=ev.start.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'}),ST={YES:'Going',NO:'Not going',MAYBE:'Maybe',INVITED:'Invited',OWNER:'Organizer'};
+  const sec=(t,h)=>`<div><div class="text-xs font-bold uppercase text-warm-muted mb-1">${t}</div>${h}</div>`;
+  openM(mh(esc(ev.title))+`<div class="text-sm space-y-3"><div><div class="text-xs font-bold text-blue-700">${esc(day)}</div><div>${esc(when(ev))}</div></div>
+  ${ev.loc?sec('Where',esc(ev.loc)):''}${ev.guests.length?sec('Guests',`<ul class="space-y-0.5">${ev.guests.map(g=>`<li>${esc(g.n)} <span class="text-[10px] text-warm-muted">${esc(ST[g.st]||'')}</span></li>`).join('')}</ul>`):''}
+  ${ev.desc?sec('Notes',`<p class="whitespace-pre-wrap text-xs">${esc(ev.desc)}</p>`):''}${ev.cal?`<div class="text-[10px] text-warm-muted">${esc(ev.cal)}</div>`:''}</div>`);
+}
+async function openMonth(off=0){
+  mOff=off;const b=new Date();b.setDate(1);b.setHours(0,0,0,0);b.setMonth(b.getMonth()+off);const nx=new Date(b);nx.setMonth(nx.getMonth()+1);
+  openM(`<div class="flex flex-col h-full"><div class="flex items-center justify-between mb-3"><div class="flex items-center gap-2"><button onclick="openMonth(${off-1})" aria-label="Previous month" class="p-2 rounded-xl bg-warm-subtle">${ic('left',18)}</button><button onclick="openMonth(${off+1})" aria-label="Next month" class="p-2 rounded-xl bg-warm-subtle">${ic('right',18)}</button><h3 class="font-display font-bold text-xl ml-2">${esc(b.toLocaleDateString(undefined,{month:'long',year:'numeric'}))}</h3></div><button onclick="closeM()" aria-label="Close" class="text-warm-muted hover:text-rose-500">${ic('x',20)}</button></div><div id="mgrid" class="flex-1 overflow-y-auto text-xs text-warm-muted">Loading...</div></div>`,'max-w-6xl h-[85vh]');
+  try{
+    const evs=await getEvents(dayKey(b),dayKey(nx),false);if(mOff!==off||!$('mgrid'))return;monthEvs=evs;
+    const days=new Date(b.getFullYear(),b.getMonth()+1,0).getDate(),todayK=dayKey(new Date()),cells=[];
+    for(let i=0;i<b.getDay();i++)cells.push('<div></div>');
+    for(let d=1;d<=days;d++){
+      const dt=new Date(b.getFullYear(),b.getMonth(),d),dk=dayKey(dt),list=evs.filter(e=>onDay(e,dt)).sort(byTime);
+      cells.push(`<button onclick="openDay('${dk}')" class="min-h-[84px] p-1.5 text-left rounded-xl border overflow-hidden ${dk===todayK?'border-blue-400 bg-blue-50':'border-warm-border bg-white'}"><div class="text-[11px] font-bold text-warm-text">${d}</div>${list.slice(0,3).map(e=>`<div class="truncate text-[10px] px-1 rounded bg-blue-100 text-blue-800 mt-0.5">${esc(e.title)}</div>`).join('')}${list.length>3?`<div class="text-[10px] text-warm-muted">+${list.length-3} more</div>`:''}</button>`);
+    }
+    $('mgrid').innerHTML=`<div class="grid grid-cols-7 gap-1.5 text-center text-[10px] font-bold uppercase text-warm-muted mb-1.5">${['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(x=>`<div>${x}</div>`).join('')}</div><div class="grid grid-cols-7 gap-1.5">${cells.join('')}</div>`;
+  }catch(e){if($('mgrid'))$('mgrid').innerHTML=`<p class="text-rose-600 font-bold">Could not load the calendar: ${esc(e.message)}</p>`}
+}
+async function openDay(dk){
+  const dt=new Date(dk+'T00:00:00'),n=new Date(dt);n.setDate(n.getDate()+1);
+  const head=mh(esc(dt.toLocaleDateString(undefined,{weekday:'long',month:'long',day:'numeric'}))),back=`<div class="mt-4">${B('bg-warm-subtle',`openMonth(${mOff})`,'Back to month')}</div>`;
+  openM(head+'<p class="text-sm text-warm-muted">Loading...</p>'+back);
+  try{
+    shown=(await getEvents(dk,dayKey(n),true)).filter(e=>onDay(e,dt)).sort(byTime);
+    openM(head+(shown.length?shown.map(evBtn).join(''):'<p class="text-sm text-warm-muted">Nothing scheduled.</p>')+back);
+  }catch(e){openM(head+`<p class="text-sm text-rose-600 font-bold">Could not load: ${esc(e.message)}</p>`+back)}
+}
+
 /* ---------- boot ---------- */
 window.addEventListener('load',()=>{
   tab('dashboard');safe('startup',()=>{clean();autoReset()});safe('golf',buildGolf);save();safe('clock',tick);safe('calendar',setupCal);weather();
-  setTimeout(()=>pullTrello(false),1500);setInterval(()=>pullTrello(false),120000);
+  setTimeout(()=>pullTrello(false),1500);setInterval(loadToday,300000);setInterval(()=>pullTrello(false),120000);
   safe('reorder',()=>{sortable($('chores'),ids=>{chores=applyOrder(chores,ids);save()});sortable($('tasks'),ids=>{tasks=applyOrder(tasks,ids);save()})});
   setInterval(()=>safe('clock',tick),1000);setInterval(weather,1800000);
-  document.addEventListener('visibilitychange',()=>{if(!document.hidden){safe('clock',tick);pullTrello(false)}});
+  document.addEventListener('visibilitychange',()=>{if(!document.hidden){safe('clock',tick);pullTrello(false);loadToday()}});
 });
 </script>
 </body>
