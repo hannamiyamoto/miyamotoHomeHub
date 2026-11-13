@@ -102,7 +102,7 @@ button{cursor:pointer}.drag{cursor:grab}
           <h3 class="font-display font-bold text-base flex items-center gap-2.5"><span class="p-1.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-700"><i data-i="utensils"></i></span>Today's Meals</h3>
           <button onclick="openPlanner()" class="px-3 py-1.5 rounded-xl bg-amber-50 text-amber-800 hover:bg-amber-100 text-xs font-bold border border-amber-200">Plan Week</button>
         </div>
-        <div id="today-meals" class="flex-1 flex flex-col justify-center my-2 gap-2"></div>
+        <div id="today-meals" class="flex-1 flex flex-col my-2 gap-2 overflow-y-auto [&>*:first-child]:mt-auto [&>*:last-child]:mb-auto"></div>
       </div>
     </section>
   </div>
@@ -179,7 +179,7 @@ skipG=load('sl_del_groceries',[]),checked=load('sl_checked',[]),pushed=load('sl_
 pantry=load('sl_pantry',{'Soy Sauce':true,'White Rice':true,'Olive Oil':true,'Salt':true,'Pepper':true,'Sugar':true,'Flour':true});
 let meals=load('sl_meals',null);
 let log=load('sl_log',[]),rewards=load('sl_rewards',{}),trel=load('sl_trello',{});
-if(!meals||!meals.Monday){meals={};DAYS.forEach(d=>meals[d]={breakfast:null,lunch:null,dinner:null})}
+if(!meals||!meals.Monday){meals={};DAYS.forEach(d=>meals[d]={breakfast:[],lunch:[],dinner:[]})}
 let groceries=[],skipped=[],chFreq='daily',chWho='ALL',picked=null;
 
 /* ---------- safety net: tidy saved data, and show problems instead of freezing ---------- */
@@ -227,7 +227,7 @@ function clean(){
   if(!obj(rewards))rewards={};rewards.bal=obj(rewards.bal)?rewards.bal:{};rewards.hist=arr(rewards.hist).filter(obj).slice(0,26);rewards.spent=arr(rewards.spent).filter(obj).slice(0,50);rewards.prize=Math.max(1,Math.min(999,+rewards.prize||10));rewards.n=Math.max(3,Math.min(12,Math.floor(+rewards.n)||6));rewards.won=obj(rewards.won)?rewards.won:{};rewards.equal=!!rewards.equal;
   if(!obj(trel))trel={};trel.g=obj(trel.g)?trel.g:{};trel.seen=arr(trel.seen).map(str);trel.done=arr(trel.done).map(str);
   if(!obj(pantry))pantry={};if(!obj(meta))meta={};if(!obj(meals))meals={};
-  DAYS.forEach(d=>{if(!obj(meals[d]))meals[d]={};SLOTS.forEach(s=>{const m=meals[d][s];meals[d][s]=obj(m)&&m.recipeId?{recipeId:sid(m.recipeId,'r',0)}:null})});
+  DAYS.forEach(d=>{if(!obj(meals[d]))meals[d]={};SLOTS.forEach(s=>{const m=meals[d][s],list=Array.isArray(m)?m:(m?[m]:[]);meals[d][s]=[...new Set(list.map(x=>obj(x)?x.recipeId:x).filter(Boolean).map(x=>sid(x,'r',0)))]})});
 }
 
 function save(){
@@ -402,13 +402,13 @@ async function syncTasks(b){
 }
 
 /* ---------- meals ---------- */
-const recOf=m=>m?recipes.find(r=>r.id===m.recipeId):null;
+const mealRecs=(d,s)=>arr(meals[d]?.[s]).map(id=>recipes.find(r=>r.id===id)).filter(Boolean); // every recipe planned for that meal
 function renderToday(){
   const d=dayName();
-  $('today-meals').innerHTML=SLOTS.map(s=>{const r=recOf(meals[d]?.[s]);
-    return `<div class="flex items-center justify-between p-3 rounded-xl bg-white border border-amber-200 shadow-sm cursor-pointer hover:border-amber-400" onclick="${r?`openCook('${r.id}')`:'openPlanner()'}">
-    <div><span class="block text-[9px] uppercase font-bold text-amber-600">${s}</span><span class="text-sm font-bold">${r?esc(r.title):'<span class="text-warm-muted italic font-normal">Unplanned</span>'}</span></div>
-    <span class="text-amber-500">${ic(r?'utensils':'plus',18)}</span></div>`}).join('');
+  $('today-meals').innerHTML=SLOTS.map(s=>{const rs=mealRecs(d,s);
+    return `<div class="shrink-0 flex items-center justify-between p-3 rounded-xl bg-white border border-amber-200 shadow-sm cursor-pointer hover:border-amber-400" onclick="openPlanner()">
+    <div class="min-w-0"><span class="block text-[9px] uppercase font-bold text-amber-600">${s}</span>${rs.length?rs.map(r=>`<button onclick="event.stopPropagation();openCook('${r.id}')" class="block max-w-full text-left text-sm font-bold truncate hover:text-amber-700">${esc(r.title)}</button>`).join(''):'<span class="text-sm text-warm-muted italic">Unplanned</span>'}</div>
+    <span class="text-amber-500 shrink-0 ml-2">${ic(rs.length?'utensils':'plus',18)}</span></div>`}).join('');
 }
 function openPlanner(){
   openM(`<div class="flex flex-col h-full">${mh('Meal Planner')}<p class="text-[11px] text-warm-muted mb-2">Drag a recipe into a slot, or tap a recipe and then tap a slot (works best on iPad).</p>
@@ -417,19 +417,21 @@ function openPlanner(){
 }
 function drawPlanner(){
   if(!$('pg'))return;
-  $('pg').innerHTML=DAYS.map(d=>`<div class="mb-3 bg-white border border-warm-border rounded-2xl p-3"><h4 class="font-bold text-sm uppercase mb-2">${d}</h4><div class="grid grid-cols-3 gap-3">${SLOTS.map(s=>{const r=recOf(meals[d]?.[s]);
+  $('pg').innerHTML=DAYS.map(d=>`<div class="mb-3 bg-white border border-warm-border rounded-2xl p-3"><h4 class="font-bold text-sm uppercase mb-2">${d}</h4><div class="grid grid-cols-3 gap-3">${SLOTS.map(s=>{const rs=mealRecs(d,s);
     return `<div class="border-2 border-dashed border-warm-border rounded-xl p-2 min-h-[70px] flex flex-col justify-center items-center bg-warm-subtle/50 ${picked?'border-amber-300':''}" onclick="slotTap('${d}','${s}')" ondragover="event.preventDefault();this.classList.add('drag-over-active')" ondragleave="this.classList.remove('drag-over-active')" ondrop="drop(event,'${d}','${s}')">
     <span class="text-[9px] font-bold uppercase text-warm-muted">${s}</span>
-    ${r?`<div class="drag bg-amber-50 text-amber-900 border border-amber-200 rounded p-1 text-xs w-full mt-1 text-center font-semibold flex items-center justify-between gap-1" draggable="true" ondragstart="event.dataTransfer.setData('text/plain','m|${d}|${s}|${r.id}')"><span class="truncate">${esc(r.title)}</span><button onclick="event.stopPropagation();setMeal('${d}','${s}',null)" aria-label="Remove meal">${ic('x',12)}</button></div>`:'<span class="text-[10px] italic text-warm-muted/60 mt-1">Drop here</span>'}</div>`}).join('')}</div></div>`).join('');
+    ${rs.map(r=>`<div class="drag bg-amber-50 text-amber-900 border border-amber-200 rounded p-1 text-xs w-full mt-1 text-center font-semibold flex items-center justify-between gap-1" draggable="true" ondragstart="event.dataTransfer.setData('text/plain','m|${d}|${s}|${r.id}')"><span class="truncate">${esc(r.title)}</span><button onclick="event.stopPropagation();removeMeal('${d}','${s}','${r.id}')" aria-label="Remove ${esc(r.title)}">${ic('x',12)}</button></div>`).join('')}
+    <span class="text-[10px] italic text-warm-muted/60 mt-1">${rs.length?'+ add another':'Drop here'}</span></div>`}).join('')}</div></div>`).join('');
   $('pv').innerHTML=recipes.length?recipes.map(r=>`<div class="drag p-3 rounded-xl bg-white border-2 ${picked===r.id?'border-amber-500':'border-warm-border'} shadow-sm flex justify-between items-center gap-2" draggable="true" onclick="picked=picked==='${r.id}'?null:'${r.id}';drawPlanner()" ondragstart="event.dataTransfer.setData('text/plain','r|${r.id}')"><span class="font-bold text-sm truncate">${esc(r.title)}</span><button onclick="event.stopPropagation();openCook('${r.id}')" aria-label="View recipe" class="text-warm-muted hover:text-blue-600">${ic('eye',16)}</button></div>`).join(''):'<p class="text-xs text-warm-muted">Add recipes in the Vault first.</p>';
 }
-function setMeal(d,s,id){meals[d][s]=id?{recipeId:id}:null;save();drawPlanner()}
-function slotTap(d,s){if(picked){setMeal(d,s,picked)}}
+function addMeal(d,s,id){const a=arr(meals[d][s]);if(!a.includes(id))a.push(id);meals[d][s]=a;save();drawPlanner()}
+function removeMeal(d,s,id){meals[d][s]=arr(meals[d][s]).filter(x=>x!==id);save();drawPlanner()}
+function slotTap(d,s){if(picked)addMeal(d,s,picked)}
 function drop(e,d,s){
   e.preventDefault();e.currentTarget.classList.remove('drag-over-active');
   const p=e.dataTransfer.getData('text/plain').split('|');let id;
-  if(p[0]==='m'){meals[p[1]][p[2]]=null;id=p[3]}else if(p[0]==='r')id=p[1];else return;
-  setMeal(d,s,id);
+  if(p[0]==='m'){meals[p[1]][p[2]]=arr(meals[p[1]][p[2]]).filter(x=>x!==p[3]);id=p[3]}else if(p[0]==='r')id=p[1];else return;
+  addMeal(d,s,id);
 }
 
 /* ---------- groceries (auto-built from the meal plan) ---------- */
@@ -440,8 +442,8 @@ function cat(n){const l=n.toLowerCase(),has=w=>w.some(x=>l.includes(x));
   if(has(['milk','cheese','butter','egg','yogurt','cream']))return'Dairy';return'Pantry / General'}
 function extract(){
   const seen={};skipped=[];
-  DAYS.forEach(d=>SLOTS.forEach(s=>{(recOf(meals[d]?.[s])?.ingredients||[]).forEach(n=>{
-    if(skipG.includes(n)||seen[n])return;const p=pantryHit(n);if(p){skipped.push(`${n} (${p})`);return}
+  DAYS.forEach(d=>SLOTS.forEach(s=>{mealRecs(d,s).flatMap(r=>r.ingredients||[]).forEach(n=>{
+    if(skipG.includes(n)||seen[n])return;const p=pantryHit(n);if(p){const t=`${n} (${p})`;if(!skipped.includes(t))skipped.push(t);return}
     seen[n]={name:n,category:cat(n),checked:checked.includes(n)}})}));
   groceries=Object.values(seen);
 }
@@ -513,7 +515,7 @@ function saveRecipe(){
 }
 function delRecipe(){
   if(!confirm('Delete this recipe?'))return;const id=$('r-id').value;recipes=recipes.filter(r=>r.id!==id);
-  DAYS.forEach(d=>SLOTS.forEach(s=>{if(meals[d][s]?.recipeId===id)meals[d][s]=null}));save();closeM();
+  DAYS.forEach(d=>SLOTS.forEach(s=>{meals[d][s]=arr(meals[d][s]).filter(x=>x!==id)}));save();closeM();
 }
 
 /* ---------- golf game, points and activity log ---------- */
