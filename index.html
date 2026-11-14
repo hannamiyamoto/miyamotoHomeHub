@@ -567,7 +567,12 @@ function closeWeek(wk){ // the week's winner (most holes) gets the prize; holes 
 }
 function logOf(c){const n=new Date(),dk=dayKey(n),wk=weekKey(n);for(let i=log.length-1;i>=0;i--){const l=log[i];if(l.cid===c.id&&(c.frequency==='weekly'?l.week===wk:l.date===dk))return l}return null}
 const logCount=c=>{const n=new Date(),dk=dayKey(n),wk=weekKey(n);return log.filter(l=>l.cid===c.id&&(c.frequency==='weekly'?l.week===wk:l.date===dk)).length}; // how many times it was done this period
-function againChore(id){const c=chores.find(x=>x.id===id);if(!c||!c.done||logCount(c)>=9)return;const l=logOf(c);logIt(c,l?l.who:(c.assignees[0]||''));save()}
+function againChore(id){ // "+1": ask who did it this time (the assigned person is listed first)
+  const c=chores.find(x=>x.id===id);if(!c||!c.done||logCount(c)>=9)return;
+  const names=[...c.assignees,...WHO.filter(w=>!c.assignees.includes(w))];
+  openM(mh('Who did it this time?')+`<p class="text-sm mb-4">Another time for <b>${esc(c.text)}</b>.</p><div class="flex gap-3">${names.map(a=>`<button onclick="pickAgain('${c.id}','${esc(a)}')" class="flex-1 py-4 rounded-2xl text-sm font-bold text-white" style="background:${(GOLF[a]||{}).shirt||'#10B981'}">${esc(a)}</button>`).join('')}</div><div class="flex justify-end mt-4">${B('bg-warm-subtle','closeM()','Cancel')}</div>`);
+}
+function pickAgain(id,who){const c=chores.find(x=>x.id===id);if(c&&c.done&&logCount(c)<9&&WHO.includes(who))logIt(c,who);save();closeM()}
 function lessChore(id){const c=chores.find(x=>x.id===id);if(c&&logCount(c)>1){undoLog(c);save()}}
 const againBtns=c=>{
   if(!c.done)return'';const n=logCount(c);
