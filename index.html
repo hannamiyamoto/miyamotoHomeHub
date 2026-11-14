@@ -58,16 +58,17 @@ button{cursor:pointer}.drag{cursor:grab}
             <h2 class="font-display font-bold text-base flex items-center gap-2.5"><span class="p-1.5 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-700"><i data-i="check"></i></span>Household Chores</h2>
             <button onclick="openChore()" class="px-3 py-1.5 rounded-xl bg-emerald-50 text-emerald-700 hover:bg-emerald-100 text-xs font-bold border border-emerald-200 flex items-center gap-1.5"><i data-i="plus" data-s="14"></i> Add</button>
           </div>
-          <div class="flex items-center justify-between">
+          <div class="flex items-center justify-between gap-2">
+            <div class="flex gap-1.5">
+              <button data-who="ALL" onclick="chWho='ALL';renderChores()">Everyone</button>
+              <button data-who="Hanna" onclick="chWho='Hanna';renderChores()">Hanna</button>
+              <button data-who="Ryan" onclick="chWho='Ryan';renderChores()">Ryan</button>
+            </div>
             <div class="flex bg-warm-subtle p-1 rounded-xl gap-1">
+              <button data-freq="all" onclick="chFreq='all';renderChores()">All</button>
               <button data-freq="daily" onclick="chFreq='daily';renderChores()">Daily</button>
               <button data-freq="weekly" onclick="chFreq='weekly';renderChores()">Weekly</button>
               <button data-freq="often" onclick="chFreq='often';renderChores()">Less often</button>
-            </div>
-            <div class="flex gap-1.5">
-              <button data-who="ALL" onclick="chWho='ALL';renderChores()">All</button>
-              <button data-who="Hanna" onclick="chWho='Hanna';renderChores()">Hanna</button>
-              <button data-who="Ryan" onclick="chWho='Ryan';renderChores()">Ryan</button>
             </div>
           </div>
         </div>
@@ -327,20 +328,23 @@ function openCal(){
 }
 
 /* ---------- chores ---------- */
-function renderChores(){
-  const SEG='px-3 py-1 rounded-lg text-xs font-bold ';
-  document.querySelectorAll('[data-freq]').forEach(b=>b.className=SEG+(b.dataset.freq===chFreq?'bg-white shadow-sm':'text-warm-muted'));
-  document.querySelectorAll('[data-who]').forEach(b=>b.className='px-3 py-1 rounded-xl text-xs font-bold '+(b.dataset.who===chWho?'bg-emerald-600 text-white':'border border-warm-border bg-white text-warm-muted'));
-  const today=dayName();
-  syncOften();const tk=dayKey(new Date());
-  let l=chores.filter(c=>chFreq==='daily'?(c.frequency==='daily'||c.days.includes(today)||(c.frequency==='often'&&(c.done||(c.nextDue||tk)<=tk))):chFreq==='weekly'?c.frequency==='weekly':c.frequency==='often');
-  if(chWho!=='ALL')l=l.filter(c=>c.assignees.includes(chWho));
-  l.sort((a,b)=>(a.done-b.done)||(chFreq==='often'?(a.nextDue||'').localeCompare(b.nextDue||''):0));
-  $('chores').innerHTML=l.length?l.map(c=>`<div class="p-3 rounded-2xl bg-white border border-warm-border flex justify-between items-center ${c.done?'opacity-50':''}" data-id="${c.id}">${GRIP}
+const choreRow=c=>`<div class="p-3 rounded-2xl bg-white border border-warm-border flex justify-between items-center ${c.done?'opacity-50':''}" data-id="${c.id}">${GRIP}
     <label class="flex items-center gap-3 flex-1 cursor-pointer"><input type="checkbox" ${c.done?'checked':''} onchange="toggleChore('${c.id}')" class="w-6 h-6 rounded text-emerald-600 focus:ring-0">
     <span class="text-sm font-bold ${c.done?'line-through text-warm-muted':''}">${esc(c.text)}${c.frequency==='weekly'?`<span class="ml-2 text-[10px] font-semibold text-warm-muted">${esc(c.days[0]||'Any day')}</span>`:''}${c.points>1?`<span class="ml-2 text-[10px] font-semibold text-amber-600">${c.points} pts</span>`:''}${c.frequency==='often'?dueTag(c):''}</span></label>
-    <div class="flex items-center gap-1.5">${creditChip(c)}${c.assignees.map(a=>`<span class="text-[10px] font-bold px-2 py-1 rounded-lg border ${a==='Ryan'?'bg-blue-50 text-blue-700':'bg-emerald-50 text-emerald-700'}">${esc(a)}</span>`).join('')}
-    <button onclick="delChore('${c.id}')" aria-label="Delete chore" class="ml-1 text-warm-muted hover:text-rose-500">${ic('trash',15)}</button></div></div>`).join(''):'<p class="text-xs text-warm-muted p-2 text-center">No chores match this view.</p>';
+    <div class="flex items-center gap-1.5">${againBtns(c)}${creditChip(c)}${c.assignees.map(a=>`<span class="text-[10px] font-bold px-2 py-1 rounded-lg border ${a==='Ryan'?'bg-blue-50 text-blue-700':'bg-emerald-50 text-emerald-700'}">${esc(a)}</span>`).join('')}
+    <button onclick="delChore('${c.id}')" aria-label="Delete chore" class="ml-1 text-warm-muted hover:text-rose-500">${ic('trash',15)}</button></div></div>`;
+function renderChores(){
+  document.querySelectorAll('[data-freq]').forEach(b=>b.className='px-3 py-1 rounded-lg text-xs font-bold '+(b.dataset.freq===chFreq?'bg-white shadow-sm':'text-warm-muted'));
+  document.querySelectorAll('[data-who]').forEach(b=>b.className='px-3.5 py-1.5 rounded-xl text-xs font-bold '+(b.dataset.who===chWho?'text-white '+(b.dataset.who==='Ryan'?'bg-blue-600':'bg-emerald-600'):'border border-warm-border bg-white text-warm-muted'));
+  const today=dayName();
+  syncOften();const tk=dayKey(new Date());
+  let l=chFreq==='all'?chores.slice():chores.filter(c=>chFreq==='daily'?(c.frequency==='daily'||c.days.includes(today)||(c.frequency==='often'&&(c.done||(c.nextDue||tk)<=tk))):chFreq==='weekly'?c.frequency==='weekly':c.frequency==='often');
+  if(chWho!=='ALL')l=l.filter(c=>c.assignees.includes(chWho));
+  const order=(a,b)=>(a.done-b.done)||(a.frequency==='often'&&b.frequency==='often'?(a.nextDue||'').localeCompare(b.nextDue||''):0);
+  if(!l.length){$('chores').innerHTML='<p class="text-xs text-warm-muted p-2 text-center">No chores match this view.</p>';return}
+  $('chores').innerHTML=chFreq==='all'
+    ?[['Daily','daily'],['Weekly','weekly'],['Less often','often']].map(([t,f])=>{const g=l.filter(c=>c.frequency===f).sort(order);return g.length?`<h4 class="text-[10px] font-bold uppercase tracking-wider text-warm-muted pt-1">${t}</h4>`+g.map(choreRow).join(''):''}).join('')
+    :l.sort(order).map(choreRow).join('');
 }
 function completeChore(c,who){
   if(c.frequency==='often'){const tk=dayKey(new Date());c.prevDue=c.nextDue;c.prevLast=c.lastDone;c.lastDone=tk;c.nextDue=addDays(tk,c.every||30)} // next one is due N days from today
@@ -348,7 +352,7 @@ function completeChore(c,who){
 }
 function toggleChore(id){
   const c=chores.find(x=>x.id===id);if(!c)return;syncOften();
-  if(c.done){if(c.frequency==='often'){c.nextDue=c.prevDue||c.nextDue;c.lastDone=c.prevLast||''}c.done=false;undoLog(c);save();return}
+  if(c.done){const n=logCount(c);if(n>1){if(!confirm(`Remove all ${n} completions of "${c.text}"?`)){renderChores();return}for(let i=1;i<n;i++)undoLog(c)}if(c.frequency==='often'){c.nextDue=c.prevDue||c.nextDue;c.lastDone=c.prevLast||''}c.done=false;undoLog(c);save();return}
   if(c.assignees.length>1){askWho(c);return}
   completeChore(c,c.assignees[0]||'');
 }
@@ -562,6 +566,13 @@ function closeWeek(wk){ // the week's winner (most holes) gets the prize; holes 
   rewards.hist.unshift({week:wk,winners:win,pts:each,pct:a.map(x=>Math.round(x*100)),holes:wins});rewards.hist=rewards.hist.slice(0,26);
 }
 function logOf(c){const n=new Date(),dk=dayKey(n),wk=weekKey(n);for(let i=log.length-1;i>=0;i--){const l=log[i];if(l.cid===c.id&&(c.frequency==='weekly'?l.week===wk:l.date===dk))return l}return null}
+const logCount=c=>{const n=new Date(),dk=dayKey(n),wk=weekKey(n);return log.filter(l=>l.cid===c.id&&(c.frequency==='weekly'?l.week===wk:l.date===dk)).length}; // how many times it was done this period
+function againChore(id){const c=chores.find(x=>x.id===id);if(!c||!c.done||logCount(c)>=9)return;const l=logOf(c);logIt(c,l?l.who:(c.assignees[0]||''));save()}
+function lessChore(id){const c=chores.find(x=>x.id===id);if(c&&logCount(c)>1){undoLog(c);save()}}
+const againBtns=c=>{
+  if(!c.done)return'';const n=logCount(c);
+  return `${n>1?`<span class="text-[10px] font-bold px-1.5 py-1 rounded-lg bg-emerald-100 text-emerald-800">\u00d7${n}</span><button onclick="lessChore('${c.id}')" aria-label="Remove one" class="text-[11px] font-bold px-1.5 py-0.5 rounded-lg border border-warm-border text-warm-muted">\u2212</button>`:''}<button onclick="againChore('${c.id}')" aria-label="Did it again" title="Did it again" class="text-[10px] font-bold px-2 py-1 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-700">+1</button>`;
+};
 const creditChip=c=>{const l=c.done&&logOf(c);return l&&l.who?`<button onclick="swapCredit('${c.id}')" class="text-[10px] font-bold px-2 py-1 rounded-lg border border-amber-300 bg-amber-50 text-amber-800 flex items-center gap-1" aria-label="Change who gets the credit">by ${esc(l.who)} ${ic('swap',12)}</button>`:''};
 function swapCredit(id){const c=chores.find(x=>x.id===id),l=c&&logOf(c);if(!l||!WHO.includes(l.who))return;l.who=WHO[1-WHO.indexOf(l.who)];save()}
 
